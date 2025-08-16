@@ -87,6 +87,28 @@ Create a complete HTTP server from scratch in C++98 that can:
         - Diff between a listen fd and connected fd
             - listenfd: an end point for client connection requrests; typically created once and exists for the lifetime of the server
             - connfd: an end point of the connection that is established btw the client and server; created each time the server accepts a connection request, exists only as long as it takes the server to service a client
+    - `getaddrinfo` function: convert string repre of hostnames, host addr, service names, and port nbr into socket addr structure
+        - `int getaddrinfo (const char *host, const char *service, const struct addrinfo *hints, struct addrinfo **result);`: return 0 if ok, nonzero error code on error
+            - Given host & service, returns a result that points to a linked list of addrinfo structure
+        - `void freeaddrinfo (struct addrinfo *result);`: return nothing, to avoid memory leaks
+        - `const char *gai_strerror (int errcode);`: return error msg
 
+            ![alt text](<img/Screenshot 2025-08-16 at 19.13.47.png>)
+    - Wrapped helper function: `open_clientfd`: A client establishs a connection with a server by calling it
+        - `int open_clientfd (char *hostname, char *port);`: return fd if ok, -1 on error
+    - Wrapped helper function: `open_listenfd`: A server creates a listening fd that is ready to receive connection requests by calling it
+        - `int open_listenfd (char *port);`: return fd if ok, -1 on error
+- Web basics
+    - HTTP (hypertext transfer protocol): a text-based app-level protocol used by web clients & servers to interact
+        - A web client (eg. browser) opens an internet connection to a server and request some content
+        - The server responds with the requested content, then closes the connection
+        - The browser reads the cotnent and displays it on the screen
+    - Web servers provide content to clients in 2 ways
+        - Fetch a disk file and return its contents to the client: aka static content & serving static content
+        - Run an executable file and return its output to the client: aka dynamic content & serving dynamic content
+        - Each of these files has a unique URL (universal resource locator)
+    - HTTP transactions
+    
 ## Reference sources
+- RFC: https://www.rfc-editor.org/
 - CSAPP: https://csapp.cs.cmu.edu/
