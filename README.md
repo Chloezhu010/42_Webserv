@@ -108,7 +108,21 @@ Create a complete HTTP server from scratch in C++98 that can:
         - Run an executable file and return its output to the client: aka dynamic content & serving dynamic content
         - Each of these files has a unique URL (universal resource locator)
     - HTTP transactions
+        - Use telnet to conduct transactions with any web server on the internet
+        ```
+        telnet www.google.com 80
+        ....
+        GET / HTTP/1.1
+        Host: www.google.com
+        ```
+        - Telnet protocol is largely replaced by SSH as a remote login tool, but it's very handy for debugging servers that talks to clients with text lines over connections
+    - HTTP requests
+        - Common methods: GET, POST, OPTIONS, HEAD, PUT, DELETE, TRACE
+    - HTTP responses
+        - Common status code: 200, 301, 400, 403, 404, 501, 505
+
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
 - CSAPP: https://csapp.cs.cmu.edu/
+    - Book: https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf
