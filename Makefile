@@ -1,5 +1,7 @@
 NAME = server
-SRC = ./webserv/server.cpp
+SRC = ./main/server.cpp \
+	  ./webserv/web_server.cpp \
+	  ./client/client_connection.cpp
 OBJ = $(SRC:.cpp=.o)
 CC = c++
 FLAGS = -Wall -Wextra -Werror -std=c++98
@@ -19,3 +21,5 @@ fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
+
+.PHONY: all clean fclean re
