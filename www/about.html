@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于 - 我的webserv</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        .back { text-align: center; margin: 20px 0; }
+        .back a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>关于这个项目</h1>
+        
+        <div class="back">
+            <a href="/">← 返回首页</a>
+        </div>
+        
+        <h3>项目介绍</h3>
+        <p>这是42学校的webserv项目，目标是实现一个功能完整的HTTP服务器。</p>
+        
+        <h3>技术栈</h3>
+        <ul>
+            <li><strong>语言：</strong>C++98</li>
+            <li><strong>协议：</strong>HTTP/1.1</li>
+            <li><strong>I/O模型：</strong>select/epoll</li>
+            <li><strong>架构：</strong>事件驱动</li>
+        </ul>
+        
+        <h3>实现功能</h3>
+        <ul>
+            <li>✅ TCP服务器</li>
+            <li>✅ HTTP协议解析</li>
+            <li>✅ 静态文件服务</li>
+            <li>🔄 CGI支持（开发中）</li>
+            <li>🔄 POST请求处理（开发中）</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的第一个webserv</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .nav {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .nav a {
+            margin: 0 15px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 欢迎来到我的webserv!</h1>
+        
+        <div class="nav">
+            <a href="/">首页</a>
+            <a href="/about.html">关于</a>
+        </div>
+        
+        <div class="info">
+            <h3>服务器信息</h3>
+            <p>✅ 这个页面由我自己编写的HTTP服务器提供</p>
+            <p>✅ 使用C++实现的webserv项目</p>
+            <p>✅ 支持静态HTML文件服务</p>
+        </div>
+        
+        <h3>功能列表</h3>
+        <ul>
+            <li>HTTP/1.1协议支持</li>
+            <li>静态文件服务</li>
+            <li>多客户端并发处理</li>
+            <li>错误页面处理</li>
+        </ul>
+        
+        <footer style="text-align: center; margin-top: 30px; color: #666;">
+            <p>Powered by my webserv - 42 School Project</p>
+        </footer>
+    </div>
+</body>
+</html>
