@@ -120,6 +120,48 @@ Create a complete HTTP server from scratch in C++98 that can:
         - Common methods: GET, POST, OPTIONS, HEAD, PUT, DELETE, TRACE
     - HTTP responses
         - Common status code: 200, 301, 400, 403, 404, 501, 505
+- Web server architecture types
+    - Process-based
+        - Traditional fork/ pre fork: eg. Apache http server
+        - Modern process-based: eg. Unicorn - Github
+    - Thread-based
+        - Thread-per-connection/ Thread pool: Apache tomcat - Linkedin
+    - Event-driven
+        - Single-threaded event loop: Node.js - Paypal
+        - Multi-process event-driven: Nginx
+    - Hybrid & modern ones
+        - Event-driven + thread pool: Netty - Twitter
+        - Coroutine/ Fiber-based: Go servers - Docker, Erlang/Elixir - Whatsapp/ Discord
+        - Async/ Await: Rust async - Dropbox/ Discord
+
+- Nginx architecture
+    - High level: Event-driven, async, non-blocking architecture
+    - Core architecture
+        - Master-worker process
+            - One master process manages config, binds to ports, and spawns worker process
+            - Multiple worker processes (usually 1/cpu core) handle all client requests
+            - Workers are single-threaded but use async IO to handle thousands of connections simultaneously
+        - Event loop with epoll/ kqueue
+            - Each worker runs an event loop that monitors fd for IO events
+            - Use epoll (linux) or kqueue (bsd/ macos) to avoid polling overhead
+            - Can handle 10,000+ concurrent connections per worker with minimal memory usage
+        - State machine approach
+            - HTTP request processing breaks into discrete state (read request, parse headers, generate response etc.)
+            - Each connection progresses through states as IO becomes available
+            - No blocking operations - if data isn't ready, the connection is parked until it is
+        - Memory pools
+            - Custom memory mgmt with pre-allocated pools to reduce malloc/ free overhead
+            - Mempools are reset btw requests rather than individually freed
+    - Ref
+        - https://blog.nginx.org/blog/inside-nginx-how-we-designed-for-performance-scale
+        - https://nginxblog-8de1046ff5a84f2c-endpoint.azureedge.net/blobnginxbloga72cde487e/wp-content/uploads/2024/12/150427_NGINX_Architecture_IG_CMYK.pdf
+        - https://aosabook.org/en/v2/nginx.html
+- CGI (Common Gateway Interface)
+    - A standard protocol that defines how web servers communicate with external programs to generate dynamic web content. A bridge between static web servers and dynamic apps.
+    - Example request flow:
+    ```
+    User submits form → Web Server → CGI Script → Database/Processing → HTML Output → Web Server → User's Browser
+    ```
 
     
 ## Reference sources
