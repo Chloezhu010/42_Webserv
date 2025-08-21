@@ -1,12 +1,12 @@
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <cstring>
+#include <iostream> // for cout, cerr
+#include <sys/socket.h> // for socket functions
+#include <netinet/in.h> // for sockaddr_in
+#include <unistd.h> // for close
+// #include <cstring>
 
 int main()
 {
-    // create socket
+    // create socket (ipv4, tcp)
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1)
     {
@@ -42,8 +42,8 @@ int main()
     {
         std::cout << "Waiting for a connection..." << std::endl;
         // accept client connection
-        int client_fd = accept(server_fd, NULL, NULL);
-        if (client_fd < 0)
+        int connection = accept(server_fd, NULL, NULL);
+        if (connection < 0)
         {
             std::cerr << "Failed to accept connection" << std::endl;
             continue; // continue to the next iteration
@@ -56,20 +56,20 @@ int main()
             // clear buffer
             memset(buffer, 0, sizeof(buffer));
             // read data from client
-            int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+            int bytes_read = read(connection, buffer, sizeof(buffer) - 1);
             if (bytes_read <= 0)
             {
                 std::cerr << "Client disconnected or read error" << std::endl;
-                close(client_fd);
+                close(connection);
                 break; // exit the loop to accept a new connection
             }
             // print received data
             std::cout << "Received: " << buffer << std::endl;
             // echo data back to client
-            send(client_fd, buffer, bytes_read, 0);
+            send(connection, buffer, bytes_read, 0);
             std::cout << "Sent: " << buffer << std::endl;
         }
-        close(client_fd);
+        close(connection);
     }
 
     // cleanup
