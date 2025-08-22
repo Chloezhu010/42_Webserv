@@ -1,6 +1,7 @@
 NAME = server
 SRC = ./main/server.cpp \
 	  ./webserv/web_server.cpp \
+	  ./tokenize/tokenize.cpp \
 	  ./client/client_connection.cpp
 OBJ = $(SRC:.cpp=.o)
 CC = c++
