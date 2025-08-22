@@ -179,7 +179,10 @@ Create a complete HTTP server from scratch in C++98 that can:
     ```
     User submits form → Web Server → CGI Script → Database/Processing → HTML Output → Web Server → User's Browser
     ```
-
+- Test browswer against real servers
+    - Install nginx: `brew install nginx`
+    - Start nginx: `nginx`
+    - Visit localhost, click around to see pattern
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/

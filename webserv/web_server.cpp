@@ -241,10 +241,11 @@ void WebServer::handleClientWrite(int client_fd) {
     }
 }
 
-// 处理HTTP请求
+// process client's http request
+// called within handleClientRead()
 void WebServer::processRequest(ClientConnection& client) {
     std::cout << "\n📥 Processing request from fd=" << client.fd << std::endl;
-    std::cout << "Request: " << client.request_buffer.substr(0, client.request_buffer.find('\n')) << std::endl;
+    std::cout << "   >> Request: " << client.request_buffer.substr(0, client.request_buffer.find('\n')) << std::endl;
     
     // 解析请求路径
     std::string path = parseHttpPath(client.request_buffer);
@@ -283,20 +284,18 @@ void WebServer::processRequest(ClientConnection& client) {
 
 // close client connection
 void WebServer::closeClient(int client_fd) {
-    // 从poll数组中移除（C++98兼容版本）
+    // remove from the poll_fds array
     for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
         if (it->fd == client_fd) {
             poll_fds.erase(it);
             break;
         }
     }
-    
-    // 从客户端映射中移除
+    // remove from the clients map
     clients.erase(client_fd);
-    
-    // 关闭socket
+    // close the socket
     close(client_fd);
-    
+
     std::cout << "🔒 Client fd=" << client_fd << " closed and cleaned up" << std::endl;
 } 
 
@@ -399,6 +398,7 @@ std::string WebServer::getFileName(const std::string& path) {
     return "www" + path;
 }
 
+// extract the url path from the http request
 std::string WebServer::parseHttpPath(const std::string& request) {
     size_t first_space = request.find(' ');
     size_t second_space = request.find(' ', first_space + 1);
