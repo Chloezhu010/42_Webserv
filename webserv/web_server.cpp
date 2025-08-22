@@ -208,7 +208,23 @@ void WebServer::handleClientWrite(int client_fd) {
             // if all response bytes are sent
             if (client.bytes_sent >= client.response_buffer.length()) {
                 std::cout << "📤 Response sent completely to fd=" << client_fd << std::endl;
-                closeClient(client_fd);
+                // reset for next request, but keep the client connection open
+                client.request_buffer.clear();
+                client.response_buffer.clear();
+                client.request_complete = false;
+                client.response_ready = false;
+                client.bytes_sent = 0;
+                // switch back to reading mode
+                for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it)
+                {
+                    if (it->fd == client_fd)
+                    {
+                        it->events = POLLIN;
+                        it->revents = 0;
+                        break;
+                    }
+                }
+                std::cout << "✅ Client fd=" << client_fd << " is ready for next request" << std::endl;
                 return;
             }
         }
