@@ -44,6 +44,23 @@ Create a complete HTTP server from scratch in C++98 that can:
 - listen(), accept(), send(), recv()
 - Non-blocking I/O with poll(), select(), epoll()
 - Address families and sockaddr structures
+## Key modules
+- Core server engine: handle network connections and IO multiplexing
+    - Socket creation, binding, listening
+    - Non-blocking I/O with poll()
+    - Accept new connections without blocking
+    - Manage multiple client connections simultaneously
+    - Read/write operations only through poll()
+    - Client connection lifecycle management
+- HTTP protocol handler: parse http requests, build responses
+- Config system: parse & manage server config
+- Request router: route requests to appropriate handlers
+- Static file server: serve static files & dir listings
+- CGI handler: execute external scripts (php, python etc.)
+- File upload handler: handle POST requests with file uploads
+- Error management
+
+
 ## Notes
 - Client-server transaction 4 steps
     - Client send request to server

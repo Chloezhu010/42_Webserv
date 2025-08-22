@@ -3,19 +3,19 @@
 
 #include <string>
 
-// 客户端连接状态
+// client connection state tracking
 struct ClientConnection {
     int fd;
-    std::string request_buffer;  // 存储接收到的请求数据
-    std::string response_buffer; // 存储要发送的响应数据
-    size_t bytes_sent;          // 已发送的字节数
-    bool request_complete;      // 请求是否接收完整
-    bool response_ready;        // 响应是否准备好
+    std::string request_buffer;  // incoming http request data
+    std::string response_buffer; // outgoing http request data
+    size_t bytes_sent;          // nbr of bytes sent to client
+    bool request_complete;      // check if the request is complete
+    bool response_ready;        // check if the response is ready
     
-    // 默认构造函数（C++98需要）
+    // default constructor
     ClientConnection();
     
-    // 带参数构造函数
+    // constructor with socket fd
     ClientConnection(int socket_fd);
 };
 

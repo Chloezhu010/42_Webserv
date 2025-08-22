@@ -15,67 +15,70 @@ WebServer::~WebServer() {
     cleanup();
 }
 
-// 设置socket为非阻塞模式
+// set socket to non-blocking mode
 bool WebServer::setNonBlocking(int fd) {
+    // get current file status flags
     int flags = fcntl(fd, F_GETFL, 0);
+    // error case
     if (flags == -1) {
         std::cerr << "❌ fcntl F_GETFL failed" << std::endl;
         return false;
     }
-    
+    // set fd flag to non-blocking
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         std::cerr << "❌ fcntl F_SETFL failed" << std::endl;
         return false;
     }
-    
     return true;
 }
 
-// 初始化服务器
+// initialize server
 bool WebServer::initialize(int port) {
-    // 创建socket
+    // create socket (ipv4, tcp)
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
         std::cerr << "❌ Failed to create socket" << std::endl;
         return false;
     }
     
-    // 设置SO_REUSEADDR
+    // enable reusing the address
     int opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         std::cerr << "❌ setsockopt failed" << std::endl;
         return false;
     }
     
-    // 设置为非阻塞
+    // set server socket to non-blocking mode
     if (!setNonBlocking(server_fd)) {
         return false;
     }
     
-    // 配置地址
+    // setup server listening address
     struct sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    address.sin_family = AF_INET; // ipv4
+    address.sin_addr.s_addr = INADDR_ANY; // bind to all network interfaces
+    address.sin_port = htons(port); // convert port nbr to network byte order, in short format
     
-    // 绑定
+    // bind socket to address
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         std::cerr << "❌ Bind failed" << std::endl;
         return false;
     }
     
-    // 监听
-    if (listen(server_fd, 10) < 0) {
+    // listen for connections: arbitrary backlog size of 10
+    if (listen(server_fd, 10) < 0)
+    {
         std::cerr << "❌ Listen failed" << std::endl;
         return false;
     }
     
-    // 初始化poll数组，添加服务器socket
-    struct pollfd server_poll_fd;
-    server_poll_fd.fd = server_fd;
-    server_poll_fd.events = POLLIN;  // 监听新连接
-    server_poll_fd.revents = 0;
-    poll_fds.push_back(server_poll_fd);
+    // create an array of pollfd structs
+    // add the listening socket to the poll_fds array so that the server can detect new connections
+    struct pollfd server_poll_fd; // a struct to tell poll() which fd to monitor and what events to watch for
+    server_poll_fd.fd = server_fd; // monitor the listening server socket
+    server_poll_fd.events = POLLIN; // listen for read events, aka incoming data/ connections
+    server_poll_fd.revents = 0; // clean slate, poll() will set this to the events that occurred on the fd
+    poll_fds.push_back(server_poll_fd); // add this socket to the monitoring list
     
     std::cout << "🚀 Non-blocking server started at http://localhost:" << port << std::endl;
     std::cout << "📁 Serving files from ./www/ directory" << std::endl;
@@ -84,75 +87,83 @@ bool WebServer::initialize(int port) {
     return true;
 }
 
-// 接受新连接
+// server accept new client connection
 void WebServer::handleNewConnection() {
     while (true) {
         int client_fd = accept(server_fd, NULL, NULL);
         
         if (client_fd == -1) {
+            // when the socket is marked as non-blocking and no connections are present to be accepted
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 没有新连接了，这是正常的
-                break;
+                break; // normal - no more connections waiting, try again later
             } else {
+                // real error cases
                 std::cerr << "❌ Accept failed: " << strerror(errno) << std::endl;
                 break;
             }
         }
-        
-        // 设置新客户端为非阻塞
+        // set client socket to non-blocking mode
         if (!setNonBlocking(client_fd)) {
             close(client_fd);
             continue;
         }
-        
-        // 添加到poll监控和客户端映射
+        // add to client poll array for event monitoring
         struct pollfd client_poll_fd;
         client_poll_fd.fd = client_fd;
-        client_poll_fd.events = POLLIN;  // 监听读事件
+        client_poll_fd.events = POLLIN;
         client_poll_fd.revents = 0;
         poll_fds.push_back(client_poll_fd);
         
-        // C++98兼容的方式添加客户端
+        // add to client map for connection state tracking
         clients.insert(std::make_pair(client_fd, ClientConnection(client_fd)));
         
         std::cout << "✅ New client connected: fd=" << client_fd << std::endl;
     }
 }
 
-// 读取客户端数据
+// handle read event: client sends http request
 void WebServer::handleClientRead(int client_fd) {
+    // find the client in the map
     std::map<int, ClientConnection>::iterator it = clients.find(client_fd);
     if (it == clients.end()) {
         return;
     }
-    
+    // if find the client, get the connection state
     ClientConnection& client = it->second;
     char buffer[1024];
     
     while (true) {
+        // call recv() to read data from client
         ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
         
+        // if bytes_read > 0, read data from client
         if (bytes_read > 0) {
-            // 成功读取数据
+            // append the received data to the client's request buffer
             client.request_buffer.append(buffer, bytes_read);
             
-            // 检查HTTP请求是否完整（简单检查：查找\r\n\r\n）
+            // check if the request is complete: simple check by finding "\r\n\r\n"
             if (client.request_buffer.find("\r\n\r\n") != std::string::npos) {
                 client.request_complete = true;
-                processRequest(client);
+                processRequest(client); // process the request
                 break;
             }
-        } else if (bytes_read == 0) {
-            // 客户端关闭连接
-            std::cout << "📤 Client disconnected: fd=" << client_fd << std::endl;
-            closeClient(client_fd);
-            break;
-        } else {
-            // bytes_read == -1
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 暂时没有数据可读，这是正常的
+        } 
+        // bytes_read == 0: client disconnected, or no more data to read
+        else if (bytes_read == 0) {
+            // if (client.request_complete) {
+            //     std::cout << "✅ Request complete, client waiting for response" << std::endl;
+            //     break;
+            // } else {
+                std::cout << "📤 Client disconnected: fd=" << client_fd << std::endl;
+                closeClient(client_fd);
                 break;
+            // }
+        } else {
+            // bytes_read == -1: error case
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break; // normal - no more data to read, try again later
             } else {
+                // real error cases
                 std::cerr << "❌ recv failed: " << strerror(errno) << std::endl;
                 closeClient(client_fd);
                 break;
@@ -161,37 +172,49 @@ void WebServer::handleClientRead(int client_fd) {
     }
 }
 
-// 发送数据给客户端
+// handle write event: server sends http response to client
 void WebServer::handleClientWrite(int client_fd) {
+    // find the client in the map
     std::map<int, ClientConnection>::iterator it = clients.find(client_fd);
     if (it == clients.end()) {
         return;
     }
-    
+    // if find the client, get the connection state
     ClientConnection& client = it->second;
     
+    // if the response is not ready, return
+    // response_ready is set in processRequest(), false by default
     if (!client.response_ready) {
-        return;  // 响应还没准备好
+        return;
     }
     
-    while (client.bytes_sent < client.response_buffer.length()) {
+    // send the response to the client - partial send handling
+    /*
+        - client.bytes_sent: nbr of bytes already sent to client
+        - client.response_buffer.length(): total size of the http response; set in processRequest()
+    */    
+    while (client.bytes_sent < client.response_buffer.length()) // keep sending until all bytes are sent
+    {
+        // calculate how many bytes remaining to send
         ssize_t bytes_to_send = client.response_buffer.length() - client.bytes_sent;
+        // send the response to the client
         ssize_t bytes_sent = send(client_fd, 
-                                client.response_buffer.c_str() + client.bytes_sent,
-                                bytes_to_send, 0);
-        
+                                client.response_buffer.c_str() + client.bytes_sent, // pointer to the start of the unsent part of the http response
+                                bytes_to_send, // remaining bytes to send
+                                0); // 0 for no flags
+        // if send successfully, update the nbr of bytes sent
         if (bytes_sent > 0) {
             client.bytes_sent += bytes_sent;
-            
+            // if all response bytes are sent
             if (client.bytes_sent >= client.response_buffer.length()) {
-                // 发送完成
                 std::cout << "📤 Response sent completely to fd=" << client_fd << std::endl;
                 closeClient(client_fd);
                 return;
             }
-        } else if (bytes_sent == -1) {
+        }
+        // if error case
+        else if (bytes_sent == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 暂时无法发送，等待下次
                 return;
             } else {
                 std::cerr << "❌ send failed: " << strerror(errno) << std::endl;
@@ -242,7 +265,7 @@ void WebServer::processRequest(ClientConnection& client) {
     }
 }
 
-// 关闭客户端连接
+// close client connection
 void WebServer::closeClient(int client_fd) {
     // 从poll数组中移除（C++98兼容版本）
     for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
@@ -259,55 +282,68 @@ void WebServer::closeClient(int client_fd) {
     close(client_fd);
     
     std::cout << "🔒 Client fd=" << client_fd << " closed and cleaned up" << std::endl;
-}
+} 
 
-// 主事件循环
+// main loop
 void WebServer::run() {
     std::cout << "🔄 Starting event loop..." << std::endl;
     
     while (true) {
-        // 使用poll等待事件
+        /* call poll() to wait for events on the file descriptors in poll_fds */
+        // set timeout to -1 to wait indefinitely until at least one event occurs
+        // cpu usage ~0% when idle, rather than constantly polling
         int ready = poll(&poll_fds[0], poll_fds.size(), -1);
         
-        if (ready == -1) {
+        // error case
+        if (ready == -1)
+        {
             std::cerr << "❌ poll failed: " << strerror(errno) << std::endl;
             break;
         }
         
-        if (ready == 0) {
-            continue;  // 超时，继续
-        }
+        // // will never happen when timeout is -1, but just in case
+        // if (ready == 0) {
+        //     continue;
+        // }
         
-        // 处理就绪的文件描述符（C++98兼容版本）
+        // if ready > 0,process ready fd
         for (size_t i = 0; i < poll_fds.size(); ++i) {
             struct pollfd& pfd = poll_fds[i];
             
+            // check revents, if no event occurred on this fd, continue to next fd
             if (pfd.revents == 0) {
-                continue;  // 没有事件
+                continue;
             }
             
+            // for server socket event
             if (pfd.fd == server_fd) {
-                // 服务器socket有新连接
+                // if the event is a read event
                 if (pfd.revents & POLLIN) {
+                    // new client wants to connect
                     handleNewConnection();
                 }
-            } else {
-                // 客户端socket事件
+            }
+            else
+            {
+                // for client socket event
+                // if the event is a read event
                 if (pfd.revents & POLLIN) {
-                    // 可读事件
+                    // handle incoming data from client
                     handleClientRead(pfd.fd);
-                } else if (pfd.revents & POLLOUT) {
-                    // 可写事件
+                }
+                // if the event is a write event
+                else if (pfd.revents & POLLOUT) {
+                    // handle outgoing data to client
                     handleClientWrite(pfd.fd);
-                } else if (pfd.revents & (POLLHUP | POLLERR)) {
-                    // 连接错误或挂起
+                }
+                // if the event is client closed the connection or has connectionerror
+                else if (pfd.revents & (POLLHUP | POLLERR)) {
                     std::cout << "📤 Client fd=" << pfd.fd << " connection error/hangup" << std::endl;
                     closeClient(pfd.fd);
-                    i--; // 因为删除了元素，调整索引
+                    i--; // decrement index to avoid skipping the next fd
                 }
             }
-            
-            pfd.revents = 0;  // 清除事件标志
+            pfd.revents = 0; // reset the event flags for this fd
         }
     }
 }

@@ -9,9 +9,9 @@
 
 class WebServer {
 private:
-    int server_fd;
-    std::vector<struct pollfd> poll_fds;
-    std::map<int, ClientConnection> clients;
+    int server_fd; // file descriptor for the server socket
+    std::vector<struct pollfd> poll_fds; // event monitor: array of pollfd structs to monitor file descriptors
+    std::map<int, ClientConnection> clients; // connection state: map of client file descriptors to their connection objects
     
     // 私有辅助方法
     bool setNonBlocking(int fd);
