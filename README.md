@@ -162,7 +162,106 @@ Create a complete HTTP server from scratch in C++98 that can:
     ```
     User submits form → Web Server → CGI Script → Database/Processing → HTML Output → Web Server → User's Browser
     ```
+- HTTP handling flow
+    1. Socket data reception & buffering
+        - Input: socket bytes from `handleClientRead()`
+        - Buffer management
+            - Append Strategy: Add new bytes to existing buffer
+            - Size Limits: Check against maximum request size (prevent DoS)
+            - Incomplete Detection: Look for request termination markers
+            - Memory Management: Prevent buffer overflow attacks
+        - Request completeness detection
+            - For GET/DELETE requests:
+                - Look for \r\n\r\n (double CRLF) - headers end marker
+                - Once found, request is complete
+            - For POST requests:
+                - First find \r\n\r\n (headers complete)
+                - Extract Content-Length from headers
+                - Continue reading until header_length + content_length bytes received
+                - Handle case where body arrives in multiple chunks
+        - Edge Cases:
+            - Partial header reception (wait for more data)
+            - Missing Content-Length in POST (return 400 Bad Request)
+            - Content-Length mismatch (return 400 Bad Request)
+    2. HTTP request parsing
+        - Input: complete HTTP request string
+        - Request-line parsing
+            - Parse pattern: `METHOD URI HTTP/VERSION\r\n`
+            - Validation logic
+                - Split by space
+                - Method validation
+                - URL validation
+                - HTTP version
+        - Header parsing logic
+            - Parse pattern: `Header-Name: Header-Value\r\n`
+            - Parsing algo
+                - Split by line: \r\n as delimiter
+                - For each header line
+                    - Split into name & value based on `:`
+                    - Trim whitespace
+                    - Store in case-insensitive container
+            - Header validation
+                - For HTTP/1.1, Host header must be present
+                - For POST, content-legnth required, content-type should be present
+            - Special header processing
+                - Connection: keep-alive vs close
+                - Transfer-encoding
+                - Content-length
+        - Body parsing (POST/PUT)
+            - Content-length strategy
+            - Body validation
+                - Size limit: check vs max body size config
+                - Too large -> 413 payload too large
+                - Negative length -> 400 bad request
+    3. Request validation & security
+        - Input: parsed HTTP request object
+    4. Method routing & handler selection
+        - Input: validated http request
+        - Routing matching logic
+            - Config-based routing
+        - Handler selection
+            - Decision tree
+                ```
+                Method = GET?
+                ├─ Yes: Is path a file? → Static File Handler
+                │       Is path a directory? → Directory Listing Handler
+                │       
+                ├─ No: Method = POST?
+                │      ├─ Yes: Is CGI script? → CGI Handler  
+                │      │       Is upload endpoint? → Upload Handler
+                │      │       Default → Form Handler
+                │      │
+                │      └─ No: Method = DELETE?
+                │             ├─ Yes: → Delete Handler
+                │             └─ No: → 405 Method Not Allowed
+                ```
+    5. Handler execution
+        - Static file handler (GET)
+        - POST handler
+        - DELETE handler
+    6. Response building
+        - Input: handler result + status code + content
+        - Status line construction
+            - Format: `HTTP/1.1 STATUS_CODE REASON_PHRASE\r\n`
+            - Status code mapping
+                ```
+                200 → "OK"
+                201 → "Created"
+                204 → "No Content"
+                400 → "Bad Request"
+                403 → "Forbidden"
+                404 → "Not Found"
+                405 → "Method Not Allowed"
+                500 → "Internal Server Error"
+                ```
+        - Header generation
+            - Required headers: Date, Server, Content-Length
+        - Response assembly
 
+- HTTP request parsing
+- HTTP response building
+- HTTP methods
+- HTTP status code
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
