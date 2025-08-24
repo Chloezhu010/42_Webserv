@@ -241,42 +241,55 @@ void WebServer::handleClientWrite(int client_fd) {
     }
 }
 
-// process client's http request
-// called within handleClientRead()
+/* process client's http request
+    - called within handleClientRead()
+
+    - extract the url path from the http request
+    - get the file name from the url path, eg. www/about.html
+    - return the file content as a string
+    - if the file exists, generate response with 200 OK
+    - if the file does not exist, generate response with 404 Not Found
+    - set the response buffer
+    - set the response ready flag
+*/
 void WebServer::processRequest(ClientConnection& client) {
     std::cout << "\n📥 Processing request from fd=" << client.fd << std::endl;
     std::cout << "   >> Request: " << client.request_buffer.substr(0, client.request_buffer.find('\n')) << std::endl;
     
-    // 解析请求路径
+    // extract the url path from the http request
     std::string path = parseHttpPath(client.request_buffer);
+    // get the file name from the url path, eg. www/about.html
     std::string filename = getFileName(path);
     
     std::cout << "📂 Requested path: " << path << std::endl;
     std::cout << "📄 File to serve: " << filename << std::endl;
     
-    // 读取文件内容
+    // return the file content as a string
     std::string content = readFile(filename);
     
+    // if the file exists, generate response with 200 OK
     if (!content.empty()) {
-        // 文件存在，返回200
+        // store the response in the client's response buffer
         client.response_buffer = generateResponse(content, 200);
         std::cout << "✅ File found, preparing 200 OK response" << std::endl;
     } else {
-        // 文件不存在，返回404
+        // if the file does not exist, generate response with 404 Not Found
+        // read the error page content from the file
         std::string error_content = readFile("www/404.html");
         if (error_content.empty()) {
             error_content = "<h1>404 Not Found</h1><p>Page not found</p>";
         }
+        // store the response in the client's response buffer
         client.response_buffer = generateResponse(error_content, 404);
         std::cout << "❌ File not found, preparing 404 response" << std::endl;
     }
-    
+    // set the response ready flag
     client.response_ready = true;
     
-    // 修改poll事件：添加写事件监听（C++98兼容版本）
+    // change the poll event from listen for POLLIN to listen for POLLOUT
     for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
         if (it->fd == client.fd) {
-            it->events = POLLOUT;  // 现在监听写事件
+            it->events = POLLOUT;
             break;
         }
     }
@@ -363,34 +376,36 @@ void WebServer::run() {
     }
 }
 
-// 清理资源
+// cleanup resources
 void WebServer::cleanup() {
-    // C++98兼容的遍历方式
+    // close all client sockets
     for (std::map<int, ClientConnection>::iterator it = clients.begin(); it != clients.end(); ++it) {
         close(it->first);
     }
     clients.clear();
-    
+    // close the server socket
     if (server_fd != -1) {
         close(server_fd);
         server_fd = -1;
     }
-    
+    // clear the poll_fds array
     poll_fds.clear();
 }
 
-// 辅助函数（保持原有逻辑）
+// read the file content from the file name, eg. www/about.html
 std::string WebServer::readFile(const std::string& filename) {
-    std::ifstream file(filename.c_str());  // C++98需要c_str()
+    std::ifstream file(filename.c_str()); 
     if (!file.is_open()) {
         return "";
     }
-    
+    // read the file content into a stringstream
     std::stringstream buffer;
-    buffer << file.rdbuf();
+    buffer << file.rdbuf(); // raw buffer access
+    // return the file content as a string
     return buffer.str();
 }
 
+// get the file name from the url path, eg. www/about.html
 std::string WebServer::getFileName(const std::string& path) {
     if (path == "/" || path == "") {
         return "www/index.html";
@@ -398,11 +413,11 @@ std::string WebServer::getFileName(const std::string& path) {
     return "www" + path;
 }
 
-// extract the url path from the http request
+// extract the url path from the http request, eg. /about.html
 std::string WebServer::parseHttpPath(const std::string& request) {
     size_t first_space = request.find(' ');
     size_t second_space = request.find(' ', first_space + 1);
-    
+    // if cannot find the space, return "/"
     if (first_space == std::string::npos || second_space == std::string::npos) {
         return "/";
     }
@@ -410,6 +425,12 @@ std::string WebServer::parseHttpPath(const std::string& request) {
     return request.substr(first_space + 1, second_space - first_space - 1);
 }
 
+/* generate the http response: TODO
+    - Reference: RFC 7230
+    - generate the http response header
+    - generate the http response body
+    - return the http response as a string
+*/
 std::string WebServer::generateResponse(const std::string& content, int status_code) {
     std::string status_text;
     switch (status_code) {
@@ -418,14 +439,17 @@ std::string WebServer::generateResponse(const std::string& content, int status_c
         default: status_text = "Internal Server Error"; break;
     }
     
+    // simplified response header
+    // CRLF: defined in RFC 7230, line break + carriage return
     std::stringstream response;
     response << "HTTP/1.1 " << status_code << " " << status_text << "\r\n";
     response << "Content-Type: text/html; charset=UTF-8\r\n";
     response << "Content-Length: " << content.length() << "\r\n";
-    response << "Server: mywebserv/2.0-nonblocking\r\n";
-    response << "Connection: close\r\n";  // 简化：每次请求后关闭连接
+    response << "Server: webserv/2.0-nonblocking\r\n";
+    response << "Connection: close\r\n";  // TODO, need to update to other options
     response << "\r\n";
+    // append the file content to the response body
     response << content;
-    
+    // return the http response (header + body) as a string
     return response.str();
 }

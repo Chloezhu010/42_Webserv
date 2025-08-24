@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>À propos - Mon webserv</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        .back { text-align: center; margin: 20px 0; }
+        .back a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>À propos de ce projet</h1>
+        
+        <div class="back">
+            <a href="/">← Retour à l'accueil</a>
+        </div>
+        
+        <h3>Présentation du projet</h3>
+        <p>Il s'agit du projet webserv de l'école 42, dont l'objectif est d'implémenter un serveur HTTP entièrement fonctionnel.</p>
+        
+        <h3>Stack technique</h3>
+        <ul>
+            <li><strong>Langage :</strong> C++98</li>
+            <li><strong>Protocole :</strong> HTTP/1.1</li>
+            <li><strong>Modèle I/O :</strong> select/epoll</li>
+            <li><strong>Architecture :</strong> Piloté par événements</li>
+        </ul>
+        
+        <h3>Fonctionnalités implémentées</h3>
+        <ul>
+            <li>✅ Serveur TCP</li>
+            <li>✅ Analyse du protocole HTTP</li>
+            <li>✅ Service de fichiers statiques</li>
+            <li>🔄 Support CGI (en développement)</li>
+            <li>🔄 Traitement des requêtes POST (en développement)</li>
+        </ul>
+    </div>
+</body>
+</html>

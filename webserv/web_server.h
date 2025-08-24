@@ -13,7 +13,7 @@ private:
     std::vector<struct pollfd> poll_fds; // event monitor: array of pollfd structs to monitor file descriptors
     std::map<int, ClientConnection> clients; // connection state: map of client file descriptors to their connection objects
     
-    // 私有辅助方法
+    // Core server helper functions
     bool setNonBlocking(int fd);
     void handleNewConnection();
     void handleClientRead(int client_fd);
@@ -22,7 +22,7 @@ private:
     void closeClient(int client_fd);
     void cleanup();
     
-    // HTTP处理辅助方法
+    // HTTP handler functions
     std::string readFile(const std::string& filename);
     std::string getFileName(const std::string& path);
     std::string parseHttpPath(const std::string& request);
