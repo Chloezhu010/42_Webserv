@@ -83,6 +83,8 @@ private:
     std::vector<std::string> getDirectiveArgs();
     size_t parseSize(const std::string& sizeStr);
     void printError(const std::string& message);
+	int stringToInt(const std::string& str);
+    std::string intToString(int value);
 
 public:
     ConfigParser();

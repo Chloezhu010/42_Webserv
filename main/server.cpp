@@ -1,6 +1,5 @@
 #include <iostream>
 #include <csignal>
-#include "../webserv/web_server.h"
 #include "../configparser/initialize.hpp"
 
 // 用于信号处理的全局服务器指针

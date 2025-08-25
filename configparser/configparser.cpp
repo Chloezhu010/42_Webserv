@@ -3,6 +3,8 @@
 #include <cctype>
 #include <stdexcept>
 #include <algorithm>
+#include <cstdlib>  // for atoi, strtoul
+#include <cerrno>   // for errno
 
 ConfigParser::ConfigParser() : currentTokenIndex(0), currentLine(1), currentColumn(1) {
 }
@@ -11,7 +13,7 @@ ConfigParser::~ConfigParser() {
 }
 
 bool ConfigParser::parseFile(const std::string& filename, Config& config) {
-    std::ifstream file(filename);
+    std::ifstream file(filename.c_str());
     if (!file.is_open()) {
         lastError = "Cannot open file: " + filename;
         return false;
@@ -121,8 +123,8 @@ Token ConfigParser::getNextToken(const std::string& content, size_t& pos) {
     }
     
     // 未知字符
-    lastError = "Unknown character at line " + std::to_string(currentLine) + 
-                ", column " + std::to_string(currentColumn);
+    lastError = "Unknown character at line " + intToString(currentLine) + 
+                ", column " + intToString(currentColumn);
     return Token(TOKEN_ERROR, "", tokenLine, tokenColumn);
 }
 
@@ -357,7 +359,7 @@ void ConfigParser::consumeToken() {
 
 bool ConfigParser::expectToken(TokenType expectedType) {
     if (currentToken().type != expectedType) {
-        printError("Expected token type " + std::to_string(expectedType));
+        printError("Expected token type " + intToString(expectedType));
         return false;
     }
     consumeToken();
@@ -397,20 +399,33 @@ std::vector<std::string> ConfigParser::getDirectiveArgs() {
     return args;
 }
 
+// C++98 compatible string to int conversion
+int ConfigParser::stringToInt(const std::string& str) {
+    // Using atoi for simple conversion
+    return std::atoi(str.c_str());
+}
+
+// C++98 compatible int to string conversion
+std::string ConfigParser::intToString(int value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
 void ConfigParser::parseListen(ServerConfig& server, const std::vector<std::string>& args) {
-    for (const std::string& arg : args) {
-        try {
-            int port = std::stoi(arg);
+    for (size_t i = 0; i < args.size(); ++i) {
+        int port = stringToInt(args[i]);
+        if (port > 0 && port <= 65535) {
             server.addListenPort(port);
-        } catch (const std::invalid_argument&) {
-            printError("Invalid port number: " + arg);
+        } else {
+            printError("Invalid port number: " + args[i]);
         }
     }
 }
 
 void ConfigParser::parseServerName(ServerConfig& server, const std::vector<std::string>& args) {
-    for (const std::string& arg : args) {
-        server.addServerName(arg);
+    for (size_t i = 0; i < args.size(); ++i) {
+        server.addServerName(args[i]);
     }
 }
 
@@ -432,10 +447,10 @@ void ConfigParser::parseClientMaxBodySize(ServerConfig& server, const std::vecto
 
 void ConfigParser::parseErrorPage(ServerConfig& server, const std::vector<std::string>& args) {
     if (args.size() >= 2) {
-        try {
-            int errorCode = std::stoi(args[0]);
+        int errorCode = stringToInt(args[0]);
+        if (errorCode > 0) {
             server.addErrorPage(errorCode, args[1]);
-        } catch (const std::invalid_argument&) {
+        } else {
             printError("Invalid error code: " + args[0]);
         }
     }
@@ -466,35 +481,42 @@ void ConfigParser::parseRedirect(LocationConfig& location, const std::vector<std
     }
 }
 
+// C++98 compatible size parsing
 size_t ConfigParser::parseSize(const std::string& sizeStr) {
     std::string str = sizeStr;
     size_t multiplier = 1;
     
     if (!str.empty()) {
-        char last = std::tolower(str.back());
+        char last = std::tolower(str[str.length() - 1]);
         if (last == 'k') {
             multiplier = 1024;
-            str.pop_back();
+            str = str.substr(0, str.length() - 1);
         } else if (last == 'm') {
             multiplier = 1024 * 1024;
-            str.pop_back();
+            str = str.substr(0, str.length() - 1);
         } else if (last == 'g') {
             multiplier = 1024 * 1024 * 1024;
-            str.pop_back();
+            str = str.substr(0, str.length() - 1);
         }
     }
     
-    try {
-        return std::stoull(str) * multiplier;
-    } catch (const std::invalid_argument&) {
-        return 1048576; // 默认1MB
+    // Using strtoul for C++98 compatibility
+    char* end;
+    errno = 0;
+    unsigned long result = std::strtoul(str.c_str(), &end, 10);
+    
+    // Check for conversion errors
+    if (errno == ERANGE || *end != '\0' || end == str.c_str()) {
+        return 1048576; // Default 1MB
     }
+    
+    return static_cast<size_t>(result) * multiplier;
 }
 
 void ConfigParser::printError(const std::string& message) {
     Token token = currentToken();
-    lastError = message + " at line " + std::to_string(token.line) + 
-                ", column " + std::to_string(token.column);
+    lastError = message + " at line " + intToString(token.line) + 
+                ", column " + intToString(token.column);
     std::cerr << "Parse Error: " << lastError << std::endl;
 }
 

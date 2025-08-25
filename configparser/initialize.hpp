@@ -42,7 +42,7 @@ class WebServer {
 private:
     Config config;
     std::vector<ServerInstance*> servers;
-    std::map<int, std::vector<ServerInstance*>> portToServers; // 端口到服务器的映射
+    std::map<int, std::vector<ServerInstance*> > portToServers; // 端口到服务器的映射
     bool initialized;
     bool running;
     
@@ -68,9 +68,9 @@ public:
     void stop();
     bool isRunning() const { return running; }
     
-    // 获取服务器信息
-    const Config& getConfig() const { return config; }
-    size_t getServerCount() const { return servers.size(); }
+    // 获取服务器信息 - 只保留声明，定义移到 .cpp 文件
+    const Config& getConfig() const;
+    size_t getServerCount() const;
     ServerInstance* findServerByHost(const std::string& hostHeader, int port);
     
     // 错误处理

@@ -17,7 +17,8 @@ ServerInstance::~ServerInstance() {
 
 bool ServerInstance::initialize() {
     // 为每个监听端口创建socket
-    for (int port : config.listen) {
+    for (size_t i = 0; i < config.listen.size(); ++i) {
+        int port = config.listen[i];
         int sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd == -1) {
             std::cerr << "Failed to create socket for port " << port 
@@ -71,7 +72,7 @@ bool ServerInstance::initialize() {
 }
 
 bool ServerInstance::startListening() {
-    for (size_t i = 0; i < socketFds.size(); i++) {
+    for (size_t i = 0; i < socketFds.size(); ++i) {
         int sockfd = socketFds[i];
         int port = config.listen[i];
         
@@ -88,7 +89,8 @@ bool ServerInstance::startListening() {
 }
 
 void ServerInstance::cleanup() {
-    for (int sockfd : socketFds) {
+    for (size_t i = 0; i < socketFds.size(); ++i) {
+        int sockfd = socketFds[i];
         if (sockfd != -1) {
             close(sockfd);
         }
@@ -102,15 +104,16 @@ bool ServerInstance::isListeningOnPort(int port) const {
 }
 
 int ServerInstance::getSocketForPort(int port) const {
-    auto it = portToSocket.find(port);
+    std::map<int, int>::const_iterator it = portToSocket.find(port);
     return (it != portToSocket.end()) ? it->second : -1;
 }
 
 LocationConfig* ServerInstance::findMatchingLocation(const std::string& path) {
-    LocationConfig* bestMatch = nullptr;
+    LocationConfig* bestMatch = NULL;
     size_t maxLength = 0;
     
-    for (auto& location : config.locations) {
+    for (size_t i = 0; i < config.locations.size(); ++i) {
+        LocationConfig& location = config.locations[i];
         // 简单的前缀匹配
         if (path.substr(0, location.path.length()) == location.path) {
             if (location.path.length() > maxLength) {
@@ -136,7 +139,8 @@ bool ServerInstance::matchesServerName(const std::string& hostHeader) const {
     }
     
     // 检查是否匹配任何服务器名
-    for (const std::string& serverName : config.serverName) {
+    for (size_t i = 0; i < config.serverName.size(); ++i) {
+        const std::string& serverName = config.serverName[i];
         if (host == serverName || serverName == "_") {
             return true;
         }
@@ -203,7 +207,7 @@ bool WebServer::validateConfig() {
         return false;
     }
     
-    for (size_t i = 0; i < config.getServerCount(); i++) {
+    for (size_t i = 0; i < config.getServerCount(); ++i) {
         const ServerConfig& server = config.getServer(i);
         
         // 检查是否有监听端口
@@ -213,7 +217,8 @@ bool WebServer::validateConfig() {
         }
         
         // 验证端口范围
-        for (int port : server.listen) {
+        for (size_t j = 0; j < server.listen.size(); ++j) {
+            int port = server.listen[j];
             if (port < 1 || port > 65535) {
                 std::cerr << "Invalid port number: " << port << std::endl;
                 return false;
@@ -235,7 +240,7 @@ bool WebServer::validateConfig() {
 }
 
 bool WebServer::createServerInstances() {
-    for (size_t i = 0; i < config.getServerCount(); i++) {
+    for (size_t i = 0; i < config.getServerCount(); ++i) {
         const ServerConfig& serverConfig = config.getServer(i);
         
         ServerInstance* server = new ServerInstance(serverConfig);
@@ -252,16 +257,20 @@ bool WebServer::createServerInstances() {
 
 bool WebServer::setupPortMapping() {
     // 为每个端口建立服务器映射
-    for (ServerInstance* server : servers) {
-        for (int port : server->getConfig().listen) {
+    for (size_t i = 0; i < servers.size(); ++i) {
+        ServerInstance* server = servers[i];
+        const std::vector<int>& listenPorts = server->getConfig().listen;
+        for (size_t j = 0; j < listenPorts.size(); ++j) {
+            int port = listenPorts[j];
             portToServers[port].push_back(server);
         }
     }
     
     // 检查端口冲突（同一端口上的多个服务器需要通过server_name区分）
-    for (const auto& pair : portToServers) {
-        int port = pair.first;
-        const std::vector<ServerInstance*>& serverList = pair.second;
+    for (std::map<int, std::vector<ServerInstance*> >::const_iterator it = portToServers.begin();
+         it != portToServers.end(); ++it) {
+        int port = it->first;
+        const std::vector<ServerInstance*>& serverList = it->second;
         
         if (serverList.size() > 1) {
             std::cout << "Port " << port << " is shared by " << serverList.size() 
@@ -269,7 +278,8 @@ bool WebServer::setupPortMapping() {
             
             // 检查是否有默认服务器（没有server_name的服务器）
             bool hasDefault = false;
-            for (ServerInstance* server : serverList) {
+            for (size_t i = 0; i < serverList.size(); ++i) {
+                ServerInstance* server = serverList[i];
                 if (server->getConfig().serverName.empty()) {
                     hasDefault = true;
                     break;
@@ -289,13 +299,13 @@ void WebServer::printServerInfo() {
     std::cout << "\n========== Server Configuration ==========" << std::endl;
     std::cout << "Total servers configured: " << servers.size() << std::endl;
     
-    for (size_t i = 0; i < servers.size(); i++) {
+    for (size_t i = 0; i < servers.size(); ++i) {
         const ServerConfig& config = servers[i]->getConfig();
         std::cout << "\nServer " << (i + 1) << ":" << std::endl;
         
         // 监听端口
         std::cout << "  Listen ports: ";
-        for (size_t j = 0; j < config.listen.size(); j++) {
+        for (size_t j = 0; j < config.listen.size(); ++j) {
             if (j > 0) std::cout << ", ";
             std::cout << config.listen[j];
         }
@@ -304,7 +314,7 @@ void WebServer::printServerInfo() {
         // 服务器名
         if (!config.serverName.empty()) {
             std::cout << "  Server names: ";
-            for (size_t j = 0; j < config.serverName.size(); j++) {
+            for (size_t j = 0; j < config.serverName.size(); ++j) {
                 if (j > 0) std::cout << ", ";
                 std::cout << config.serverName[j];
             }
@@ -343,7 +353,8 @@ bool WebServer::start() {
     }
     
     // 开始监听所有服务器
-    for (ServerInstance* server : servers) {
+    for (size_t i = 0; i < servers.size(); ++i) {
+        ServerInstance* server = servers[i];
         if (!server->startListening()) {
             std::cerr << "Failed to start listening on server" << std::endl;
             return false;
@@ -363,7 +374,8 @@ void WebServer::stop() {
     
     std::cout << "Stopping WebServer..." << std::endl;
     
-    for (ServerInstance* server : servers) {
+    for (size_t i = 0; i < servers.size(); ++i) {
+        ServerInstance* server = servers[i];
         server->cleanup();
     }
     
@@ -372,7 +384,8 @@ void WebServer::stop() {
 }
 
 void WebServer::cleanup() {
-    for (ServerInstance* server : servers) {
+    for (size_t i = 0; i < servers.size(); ++i) {
+        ServerInstance* server = servers[i];
         delete server;
     }
     servers.clear();
@@ -380,22 +393,23 @@ void WebServer::cleanup() {
 }
 
 ServerInstance* WebServer::findServerByHost(const std::string& hostHeader, int port) {
-    auto it = portToServers.find(port);
+    std::map<int, std::vector<ServerInstance*> >::iterator it = portToServers.find(port);
     if (it == portToServers.end()) {
-        return nullptr;
+        return NULL;
     }
     
     const std::vector<ServerInstance*>& serverList = it->second;
     
     // 首先尝试精确匹配服务器名
-    for (ServerInstance* server : serverList) {
+    for (size_t i = 0; i < serverList.size(); ++i) {
+        ServerInstance* server = serverList[i];
         if (server->matchesServerName(hostHeader)) {
             return server;
         }
     }
     
     // 如果没有找到匹配的，返回第一个（默认服务器）
-    return serverList.empty() ? nullptr : serverList[0];
+    return serverList.empty() ? NULL : serverList[0];
 }
 
 const Config& WebServer::getConfig() const {
