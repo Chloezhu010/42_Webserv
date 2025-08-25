@@ -168,6 +168,9 @@ bool WebServer::initialize(const std::string& configFile) {
         std::cerr << "Failed to parse config file: " << parser.getLastError() << std::endl;
         return false;
     }
+	std::cout << "\n";
+    displayFullConfig(config);
+    std::cout << "\n";
     
     return initializeFromConfig(config);
 }

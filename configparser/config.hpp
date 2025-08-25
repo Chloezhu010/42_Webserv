@@ -94,4 +94,8 @@ struct Config {
     }
 };
 
+void displayServerConfig(const ServerConfig& server, size_t serverIndex = 0);
+void displayLocationConfig(const LocationConfig& location, size_t indent = 0);
+void displayFullConfig(const Config& config);
+
 #endif // CONFIG_HPP

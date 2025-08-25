@@ -2,6 +2,7 @@ NAME = server
 SRC = ./main/server.cpp \
 	  ./configparser/configparser.cpp \
 	  ./configparser/initialize.cpp \
+	  ./configparser/configdisplay.cpp \
 	  ./client/client_connection.cpp
 OBJ = $(SRC:.cpp=.o)
 CC = c++
