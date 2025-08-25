@@ -306,6 +306,20 @@ bool ConfigParser::parseServerDirective(ServerConfig& server) {
     return true;
 }
 
+void ConfigParser::parseCgiPass(LocationConfig& location, const std::vector<std::string>& args) {
+    if (!args.empty()) {
+        location.cgiPath = args[0];
+        
+        if (location.cgiExtension.empty()) {
+            std::string path = args[0];
+            size_t lastDot = path.find_last_of('.');
+            if (lastDot != std::string::npos) {
+                location.cgiExtension = path.substr(lastDot);
+            }
+        }
+    }
+}
+
 bool ConfigParser::parseLocationDirective(LocationConfig& location) {
     std::string directive = currentToken().value;
     consumeToken();
@@ -326,6 +340,8 @@ bool ConfigParser::parseLocationDirective(LocationConfig& location) {
         parseAutoindex(location, args);
     } else if (directive == "cgi") {
         parseCgi(location, args);
+	} else if (directive == "cgi_pass") {
+        parseCgiPass(location, args); 
     } else if (directive == "return" || directive == "redirect") {
         parseRedirect(location, args);
     } else {

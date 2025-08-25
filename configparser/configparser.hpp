@@ -78,7 +78,8 @@ private:
     void parseAutoindex(LocationConfig& location, const std::vector<std::string>& args);
     void parseCgi(LocationConfig& location, const std::vector<std::string>& args);
     void parseRedirect(LocationConfig& location, const std::vector<std::string>& args);
-    
+    void parseCgiPass(LocationConfig& location, const std::vector<std::string>& args);
+	
     // 工具方法
     std::vector<std::string> getDirectiveArgs();
     size_t parseSize(const std::string& sizeStr);
