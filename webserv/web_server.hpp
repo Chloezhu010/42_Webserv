@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 #include <poll.h>
-#include "../client/client_connection.h"
+#include "../client/client_connection.hpp"
 
 class WebServer {
 private:

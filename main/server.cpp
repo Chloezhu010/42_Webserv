@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../webserv/web_server.h"
+#include "../webserv/web_server.hpp"
 
 int main() {
     WebServer server;

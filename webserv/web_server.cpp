@@ -1,4 +1,4 @@
-#include "./web_server.h"
+#include "./web_server.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,6 +8,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <errno.h>
+#include "../http/http_request.hpp" // for isRequestComplete
 
 WebServer::WebServer() : server_fd(-1) {}
 
