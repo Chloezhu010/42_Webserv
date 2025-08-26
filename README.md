@@ -159,9 +159,13 @@ Create a complete HTTP server from scratch in C++98 that can:
 - CGI (Common Gateway Interface)
     - A standard protocol that defines how web servers communicate with external programs to generate dynamic web content. A bridge between static web servers and dynamic apps.
     - Example request flow:
-    ```
-    User submits form → Web Server → CGI Script → Database/Processing → HTML Output → Web Server → User's Browser
-    ```
+        ```
+        // static content - server just reads a file and sends it
+        Browser requests /hello.html → Server reads hello.html → Sends file content
+        
+        // dynamic content - server runs a program that generates content on-the-fly
+        Browser requests /hello.php → Server runs PHP program → PHP generates HTML → Sends generated content
+        ```
 - HTTP handling flow
     1. Socket data reception & buffering
         - Input: socket bytes from `handleClientRead()`
@@ -253,6 +257,7 @@ Create a complete HTTP server from scratch in C++98 that can:
                 404 → "Not Found"
                 405 → "Method Not Allowed"
                 500 → "Internal Server Error"
+                etc.
                 ```
         - Header generation
             - Required headers: Date, Server, Content-Length
@@ -262,6 +267,17 @@ Create a complete HTTP server from scratch in C++98 that can:
 - HTTP response building
 - HTTP methods
 - HTTP status code
+    - 200: successful response
+    - 204: no content
+    - 301: permanent redirect
+    - 302: temporary redirect
+    - 400: bad request
+    - 403: forbidden
+    - 404: tot found
+    - 405: method not allowed
+    - 413: content too large
+    - 418: i'm a teapot
+    - 500: internal server error
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
