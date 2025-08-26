@@ -34,9 +34,45 @@ bool HttpRequest::methodCanHaveBody(const std::string& method) const
 /* extract the content length from the header section
     - return -1 if not found or invalid
     - return the content length if found
+    - content-length can be 0, can return 200 ok
 */
 size_t HttpRequest::extractContentLength(const std::string& header_section) const
 {
+    // convert header_section to lower case for case-insensitive search
+    std::string lower_header = header_section;
+    std::transform(lower_header.begin(), lower_header.end(), lower_header.begin(), ::tolower);
+
+    // find "content-length:" in the header section
+    size_t pos = lower_header.find("content-length:");
+    if (pos == std::string::npos){
+        return -1; // not found
+    }
+
+    // find the value after "content-length:"
+    size_t colon_pos = lower_header.find(':', pos); // find the ':' after content-length
+    size_t line_end = lower_header.find("\n", colon_pos); // find the end of the line
+    if (colon_pos == std::string::npos || line_end == std::string::npos){ {
+        return -1; // invalid format
+    }
+    std::string length_str = lower_header.substr(colon_pos + 1, line_end - colon_pos - 1);
+
+    // cleanup the value (remove spaces, \r, \n)
+    size_t start = length_str.find_first_not_of(" \t\r\n");
+    size_t end = length_str.find_last_not_of(" \t\r\n");
+    if (start == std::string::npos || end == std::string::npos)
+        return -1; // invalid format
+    length_str = length_str.substr(start, end - start + 1);
+
+    // convert the value to long
+    char *endptr; // point to the 1st invalid character
+    long content_length = strtol(length_str.c_str(), &endptr, 10);
+    if (*endptr != '\0' || content_length < 0) {
+        return -1; // invalid content length
+
+    
+
+
+    // return the content length
 
 }
 
