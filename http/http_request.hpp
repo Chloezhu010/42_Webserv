@@ -7,6 +7,13 @@
 #include <algorithm>
 #include <sstream>
 
+enum RequestStatus {
+    INCOMPLETE, //0
+    COMPLETE, //1
+    OVERSIZED, //2
+    INVALID, //3
+};
+
 class HttpRequest {
 private:
     std::string method;
@@ -20,7 +27,7 @@ public:
     HttpRequest();
     ~HttpRequest();
     // check request completeness before parsing
-    bool isRequestComplete(const std::string& request_buffer) const;
+    RequestStatus isRequestComplete(const std::string& request_buffer) const;
     // main parsing method
     void parse(const std::string& request);
     // getters
@@ -36,7 +43,7 @@ private:
     // helper methods
     static std::string extractMethod(const std::string& request_buffer);
     bool methodCanHaveBody(const std::string& method) const;
-    size_t extractContentLength(const std::string& header_section) const;
+    long extractContentLength(const std::string& header_section) const;
 
 };
 
