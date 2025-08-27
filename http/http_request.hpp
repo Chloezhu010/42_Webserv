@@ -24,8 +24,8 @@ private:
     bool is_valid;
 
 public:
-    HttpRequest();
-    ~HttpRequest();
+    // HttpRequest();
+    // ~HttpRequest();
     // check request completeness before parsing
     RequestStatus isRequestComplete(const std::string& request_buffer) const;
     // main parsing method
@@ -41,7 +41,7 @@ public:
 
 private:
     // helper methods
-    static std::string extractMethod(const std::string& request_buffer);
+    std::string extractMethod(const std::string& request_buffer) const;
     bool methodCanHaveBody(const std::string& method) const;
     long extractContentLength(const std::string& header_section) const;
 

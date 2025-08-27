@@ -12,7 +12,7 @@ static bool isValidMethod(const std::string& method)
     - return empty string if not found
     - return GET, POST, DELETE etc, if found
 */
-static std::string extractMethod(const std::string& request_buffer)
+std::string HttpRequest::extractMethod(const std::string& request_buffer) const
 {
     // find the first space
     size_t first_space = request_buffer.find(' ');
@@ -107,7 +107,7 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     size_t received_body_length = request_buffer.length() - body_start;
     if (received_body_length < static_cast<size_t>(content_length))
         return INCOMPLETE;
-    else if (received_body_length > static_cast<size_t>(content_length))
+    else if (received_body_length >= static_cast<size_t>(content_length))
         return COMPLETE;
     else
         return OVERSIZED;

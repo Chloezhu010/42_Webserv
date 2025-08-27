@@ -100,9 +100,9 @@ int main()
     std::string request_buffer = 
         "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
     std::string request_buffer2 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 11\r\nconnection: close\r\n\r\nhello=world\r\n\r\n";
+        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 11\r\nconnection: close\r\n\r\nhello=world";
     std::string request_buffer3 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 10\r\n\r\nhello=world\r\n\r\n";
+        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 15\r\n\r\nhello=world";
 
     // std::string method = extractMethod(request_buffer);
     // if (method.empty())
@@ -127,12 +127,17 @@ int main()
     long content_length2 = extractContentLength(header_section);
     std::cout << "content_length2: " << content_length2 << std::endl;
 
-    // size_t body_start = header_end + 4;
-    // size_t received_body_length = request_buffer2.length() - body_start;
-    // std::cout << "received_body_length2: " << received_body_length << std::endl;
+    size_t body_start = header_end + 4;
+    size_t received_body_length = request_buffer2.length() - body_start;
+    std::cout << "received_body_length2: " << received_body_length << std::endl;
+    if (received_body_length < static_cast<size_t>(content_length2))
+        std::cout << "incomplete\n";
+    else if (received_body_length >= static_cast<size_t>(content_length2))
+        std::cout << "complete\n";
+    else
+        std::cout << "oversized\n";
 
-    // bool is_complete = isRequestComplete(request_buffer);
-    // std::cout << "is_complete: " << is_complete << std::endl;
+
     bool is_complete2 = isRequestComplete(request_buffer2);
     std::cout << "is_complete: " << is_complete2 << std::endl;
     bool is_complete3 = isRequestComplete(request_buffer3);
