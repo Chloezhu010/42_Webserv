@@ -1,13 +1,5 @@
 #include "http_request.hpp"
 
-/* check if the method is valid */
-static bool isValidMethod(const std::string& method)
-{
-    if (method == "GET" || method == "POST" || method == "DELETE")
-        return true;
-    return false;
-}
-
 /* extract the method from the request line
     - return empty string if not found
     - return GET, POST, DELETE etc, if found
@@ -23,6 +15,23 @@ std::string HttpRequest::extractMethod(const std::string& request_buffer) const
     std::string method = request_buffer.substr(0, first_space);
     // return the method
     return method;
+}
+
+/* check if the method is valid
+    - if false: 405 method not allowed
+*/
+bool HttpRequest::isValidMethod(const std::string& method) const
+{
+    if (method == "GET" || method == "POST" || method == "DELETE")
+        return true;
+    return false;
+}
+
+/* extract the http version from the header section */
+int HttpRequest::extractHTTPVersion(const std::string& header_section) const
+{
+    // find the 2nd space
+    size_t first_spac
 }
 
 /* only POST can have body, GET and DELETE cann't */
@@ -73,11 +82,13 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
 }
 
 /* check if the http request is complete
-    - return value
-        - TODO: need to change to value <> for http response later
+    - return value: INCOMPLETE, COMPLETE, OVERSIZED, INVALID
     - check if the header is complete: TODO to enhance "host"
     - check if the method is valid: currently only support GET, POST, DELETE
-    - 
+    - check for method that cannot have body
+    - check for method that can have body
+        - Presence of content-length
+        - Validation of content-length <> body
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
     // check if the header is complete

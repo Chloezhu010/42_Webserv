@@ -63,36 +63,45 @@ bool methodCanHaveBody(const std::string& method)
     return (method == "POST");
 }
 
-bool isRequestComplete(const std::string& request_buffer) {
+enum RequestStatus {
+    INCOMPLETE, //0
+    COMPLETE, //1
+    OVERSIZED, //2
+    INVALID, //3
+};
+
+RequestStatus isRequestComplete(const std::string& request_buffer) {
     // check if the header is complete
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
-        return false;
+        return INCOMPLETE;
     }
     // extract the method from the first line
     std::string method = extractMethod(request_buffer);
     if (method.empty()) {
-        return false; // if cannot extract method, return false
+        return INVALID; // if cannot extract method, return false
     }
     if (!isValidMethod(method))
-        return false; // if invalid method, return false (not supported)
+        return INVALID; // if invalid method, return false (not supported)
     // check if the method requires a body
     // for GET, DELETE that cannot have body, return true
     if (!methodCanHaveBody(method)) {
-        return true;
+        return COMPLETE;
     }
     // for POST that can have body, check if Content-Length header is present
-    std::string header_section = request_buffer.substr(0, header_end + 4);
+    std::string header_section = request_buffer.substr(0, header_end + 4); // keep "\r\n\r\n"
     long content_length = extractContentLength(header_section);
     if (content_length < 0)
-        return false; // if invalid content length, return false
+        return INVALID; // if invalid content length, return false
     // check if received body length is equal to content length
     size_t body_start = header_end + 4; // after "\r\n\r\n"
     size_t received_body_length = request_buffer.length() - body_start;
     if (received_body_length < static_cast<size_t>(content_length))
-        return false; // if received body length is less than content length, return false
-    // if all checks pass, return true
-    return true;
+        return INCOMPLETE;
+    else if (received_body_length >= static_cast<size_t>(content_length))
+        return COMPLETE;
+    else
+        return OVERSIZED;
 }
 
 int main()

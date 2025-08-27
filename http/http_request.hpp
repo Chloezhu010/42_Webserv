@@ -26,25 +26,44 @@ private:
 public:
     // HttpRequest();
     // ~HttpRequest();
+
     // check request completeness before parsing
     RequestStatus isRequestComplete(const std::string& request_buffer) const;
+    
     // main parsing method
     void parse(const std::string& request);
+    
     // getters
     const std::string& getMethod() const;
     const std::string& getUri() const;
     const std::string& getHttpVersion() const;
+    
     // validation methods (after parsing)
     bool requireBody() const;
     size_t getContentLength() const;
     bool isValid() const;
 
 private:
-    // helper methods
+    /* extract & validate method */
     std::string extractMethod(const std::string& request_buffer) const;
+    bool isValidMethod(const std::string& method) const;
+    
+    /* extract & validate http version */
+    int extractHTTPVersion(const std::string& header_section) const;
+    bool isValidVersion(const int version) const;
+
+    /* extract & validate host */
+    std::string extractHost(const std::string& header_section) const;
+
+    /* validation of header section */
+
+    /* extract content length */
     bool methodCanHaveBody(const std::string& method) const;
     long extractContentLength(const std::string& header_section) const;
+    
+    /* extract & validate transfer-encoding */
 
+    
 };
 
 #endif
