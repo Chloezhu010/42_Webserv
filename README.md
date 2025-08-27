@@ -166,6 +166,122 @@ Create a complete HTTP server from scratch in C++98 that can:
         // dynamic content - server runs a program that generates content on-the-fly
         Browser requests /hello.php → Server runs PHP program → PHP generates HTML → Sends generated content
         ```
+- HTTP request validation logic
+    - Phase 1: Initial buffer validation
+        ```
+        📥 Raw Buffer Received
+        │
+        ├─❌ Buffer Empty? → Return NEED_MORE_DATA
+        ├─❌ Buffer > MAX_REQUEST_SIZE? → Return 413 REQUEST_ENTITY_TOO_LARGE  
+        ├─❌ Contains NULL bytes? → Return 400 BAD_REQUEST
+        └─✅ Continue to Phase 2
+        ```
+    - Phase 2: Request completeness check
+        ```
+        📄 Check Request Completeness
+        │
+        ├─❌ No "\r\n\r\n" found? → Return NEED_MORE_DATA
+        ├─❌ Only "\n\n" found (missing \r)? → Return 400 BAD_REQUEST
+        ├─❌ Malformed line endings? → Return 400 BAD_REQUEST
+        └─✅ Continue to Phase 3
+        ```
+    - Phase 3: Request line validation
+        ```
+        🔍 Parse Request Line (First Line)
+        │
+        ├─❌ Empty request line? → Return 400 BAD_REQUEST
+        ├─❌ Wrong line ending (\n only)? → Return 400 BAD_REQUEST
+        ├─❌ More than 3 parts? → Return 400 BAD_REQUEST
+        ├─❌ Less than 3 parts? → Return 400 BAD_REQUEST
+        │
+        └─✅ Split into METHOD URI HTTP_VERSION
+            │
+            ├─🔸 METHOD Validation:
+            │  ├─❌ Invalid method? → Return 405 METHOD_NOT_ALLOWED
+            │  ├─❌ Method not in config allowed_methods? → Return 405 METHOD_NOT_ALLOWED
+            │  └─✅ Valid method
+            │
+            ├─🔸 URI Validation:
+            │  ├─❌ URI empty? → Return 400 BAD_REQUEST
+            │  ├─❌ URI doesn't start with '/'? → Return 400 BAD_REQUEST
+            │  ├─❌ URI too long (> MAX_URI_LENGTH)? → Return 414 REQUEST_URI_TOO_LONG
+            │  ├─❌ Invalid characters in URI? → Return 400 BAD_REQUEST
+            │  ├─❌ Malformed query string? → Return 400 BAD_REQUEST
+            │  └─✅ Valid URI
+            │
+            └─🔸 HTTP_VERSION Validation:
+            ├─❌ Not "HTTP/1.1" → Return 505 HTTP_VERSION_NOT_SUPPORTED
+            └─✅ Valid HTTP version
+        ```
+    - Phase 4: Headers validation
+        ```
+        📋 Parse and Validate Headers
+        │
+        ├─❌ Header count > MAX_HEADERS? → Return 431 REQUEST_HEADER_FIELDS_TOO_LARGE
+        ├─❌ Header line missing ':'? → Return 400 BAD_REQUEST
+        ├─❌ Header name contains invalid chars? → Return 400 BAD_REQUEST
+        ├─❌ Header name empty? → Return 400 BAD_REQUEST
+        ├─❌ Individual header > MAX_HEADER_SIZE? → Return 431 REQUEST_HEADER_FIELDS_TOO_LARGE
+        │
+        ├─🔸 Host Header (HTTP/1.1 Required):
+        │  ├─❌ Missing Host header? → Return 400 BAD_REQUEST
+        │  ├─❌ Multiple Host headers? → Return 400 BAD_REQUEST
+        │  ├─❌ Empty Host value? → Return 400 BAD_REQUEST
+        │  └─✅ Valid Host header
+        │
+        ├─🔸 Content-Length Validation:
+        │  ├─❌ Multiple Content-Length headers? → Return 400 BAD_REQUEST
+        │  ├─❌ Negative value? → Return 400 BAD_REQUEST
+        │  ├─❌ Non-numeric value? → Return 400 BAD_REQUEST
+        │  ├─❌ Content-Length with GET/DELETE? → Return 400 BAD_REQUEST (optional)
+        │  └─✅ Valid Content-Length
+        │
+        ├─🔸 Transfer-Encoding Validation:
+        │  ├─❌ Both Transfer-Encoding & Content-Length? → Return 400 BAD_REQUEST
+        │  ├─❌ Transfer-Encoding != "chunked"? → Return 501 NOT_IMPLEMENTED
+        │  └─✅ Valid Transfer-Encoding
+        │
+        └─✅ Continue to Phase 5
+        ```
+    - Phase 5: Body validation (if present)
+        ```
+        📦 Body Validation
+        │
+        ├─🔸 Content-Length Body:
+        │  ├─❌ Body length != Content-Length? → Return 400 BAD_REQUEST
+        │  ├─❌ Body length > MAX_BODY_SIZE? → Return 413 REQUEST_ENTITY_TOO_LARGE
+        │  └─✅ Valid body
+        │
+        ├─🔸 Chunked Body:
+        │  ├─❌ Invalid chunk size format? → Return 400 BAD_REQUEST
+        │  ├─❌ Chunk size > MAX_CHUNK_SIZE? → Return 413 REQUEST_ENTITY_TOO_LARGE
+        │  ├─❌ Missing final chunk (0\r\n\r\n)? → Return 400 BAD_REQUEST
+        │  └─✅ Valid chunked body
+        │
+        └─✅ Continue to Phase 6
+        ```
+    - Phase 6: Config-based validation
+        ```
+        ⚙️ Server Configuration Validation
+        │
+        ├─🔸 Route Matching:
+        │  ├─❌ No matching route? → Return 404 NOT_FOUND
+        │  ├─❌ Method not allowed for route? → Return 405 METHOD_NOT_ALLOWED
+        │  └─✅ Route found
+        │
+        ├─🔸 File Size Limits:
+        │  ├─❌ Body size > route max_body_size? → Return 413 REQUEST_ENTITY_TOO_LARGE
+        │  └─✅ Within limits
+        │
+        ├─🔸 CGI Validation (if applicable):
+        │  ├─❌ CGI not enabled for route? → Return 403 FORBIDDEN
+        │  ├─❌ CGI script not found? → Return 404 NOT_FOUND
+        │  ├─❌ CGI script not executable? → Return 500 INTERNAL_SERVER_ERROR
+        │  └─✅ CGI ready
+        │
+        └─✅ Request Valid - Process Request
+        ```
+
 - HTTP handling flow
     1. Socket data reception & buffering
         - Input: socket bytes from `handleClientRead()`
