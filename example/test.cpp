@@ -3,6 +3,13 @@
 #include <algorithm>
 #include <sstream>
 
+// constants (TBD)
+const size_t MAX_REQUEST_SIZE = 8*1024*1024;
+const size_t MAX_HEADER_SIZE =8*1024;
+const size_t MAX_HEADER = 100;
+const size_t MAX_URI_LENGTH = 2048;
+const size_t MAX_BODY_SIZE = 10*1024*1024;
+
 static bool isValidMethod(const std::string& method)
 {
     if (method == "GET" || method == "POST" || method == "DELETE")
@@ -64,93 +71,85 @@ bool methodCanHaveBody(const std::string& method)
 }
 
 enum RequestStatus {
-    INCOMPLETE, //0
-    COMPLETE, //1
-    OVERSIZED, //2
-    INVALID, //3
+    NEED_MORE_DATA, //0
+    REQUEST_COMPLETE, //1
+    REQUEST_TOO_LARGE, //2
+    INVALID_REQUEST //3
 };
 
+RequestStatus checkBodyComplete(const std::string& buffer, size_t header_end) {
+    /* extract the header section */
+    std::string header_section = buffer.substr(0, header_end);
+    
+    /* extract content length */
+    long content_length = extractContentLength(header_section);
+    if (content_length < 0) // invalid content-length
+        return INVALID_REQUEST;
+    if (content_length == 0) // no body needed
+        return REQUEST_COMPLETE;
+    if (content_length > MAX_BODY_SIZE) // exceed body size
+        return REQUEST_TOO_LARGE;
+    
+    /* check actual body vs content-length */
+    size_t body_start = header_end + 4;
+    size_t body_length = buffer.length() - body_start;
+    if (body_length < content_length)
+        return NEED_MORE_DATA;
+    // else if (body_length >= content_length)
+    return REQUEST_COMPLETE;
+}
+
+/* initial check if the http request is complete */
 RequestStatus isRequestComplete(const std::string& request_buffer) {
     // check if the header is complete
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
-        return INCOMPLETE;
+        return NEED_MORE_DATA;
     }
     // extract the method from the first line
     std::string method = extractMethod(request_buffer);
     if (method.empty()) {
-        return INVALID; // if cannot extract method, return false
+        return INVALID_REQUEST; // if cannot extract method, return false
     }
     if (!isValidMethod(method))
-        return INVALID; // if invalid method, return false (not supported)
+        return INVALID_REQUEST; // if invalid method, return false (not supported)
     // check if the method requires a body
     // for GET, DELETE that cannot have body, return true
     if (!methodCanHaveBody(method)) {
-        return COMPLETE;
+        return REQUEST_COMPLETE;
     }
     // for POST that can have body, check if Content-Length header is present
     std::string header_section = request_buffer.substr(0, header_end + 4); // keep "\r\n\r\n"
     long content_length = extractContentLength(header_section);
     if (content_length < 0)
-        return INVALID; // if invalid content length, return false
+        return INVALID_REQUEST; // if invalid content length, return false
     // check if received body length is equal to content length
     size_t body_start = header_end + 4; // after "\r\n\r\n"
     size_t received_body_length = request_buffer.length() - body_start;
     if (received_body_length < static_cast<size_t>(content_length))
-        return INCOMPLETE;
-    else if (received_body_length >= static_cast<size_t>(content_length))
-        return COMPLETE;
+        return NEED_MORE_DATA;
     else
-        return OVERSIZED;
+        return REQUEST_COMPLETE;
 }
+
 
 int main()
 {
     std::string request_buffer = 
         "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
     std::string request_buffer2 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 11\r\nconnection: close\r\n\r\nhello=world";
+        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 100\r\nconnection: close\r\n\r\nhello=world";
     std::string request_buffer3 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 15\r\n\r\nhello=world";
+        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 5\r\n\r\nhello=world";
 
-    // std::string method = extractMethod(request_buffer);
-    // if (method.empty())
-    //     std::cout << "Error: Method not found" << std::endl;
-    // else
-    //     std::cout << "Method: " << method << std::endl;
-
-    // std::string header_section = "content-length:   11   \r\n";
-    // long content_length = extractContentLength(header_section);
-    // if (content_length < 0)
-    // {
-    //     std::cout << "Error: Invalid Content-Length" << std::endl;
-    //     // std::cout << "content_length: " << content_length << std::endl;
-    // }
-    // else
-    //     std::cout << "Valid content_length: " << content_length << std::endl;
-    
     size_t header_end = request_buffer2.find("\r\n\r\n");
-    std::string header_section = request_buffer2.substr(0, header_end);
-    std::cout << "Header section: '" << header_section << "'" << std::endl;
-    std::cout << std::endl;
-    long content_length2 = extractContentLength(header_section);
-    std::cout << "content_length2: " << content_length2 << std::endl;
+    size_t bodycomplete_status = checkBodyComplete(request_buffer2, header_end);
+    std::cout << "body status: " << bodycomplete_status << std::endl;
 
-    size_t body_start = header_end + 4;
-    size_t received_body_length = request_buffer2.length() - body_start;
-    std::cout << "received_body_length2: " << received_body_length << std::endl;
-    if (received_body_length < static_cast<size_t>(content_length2))
-        std::cout << "incomplete\n";
-    else if (received_body_length >= static_cast<size_t>(content_length2))
-        std::cout << "complete\n";
-    else
-        std::cout << "oversized\n";
+    size_t request_status = isRequestComplete(request_buffer);
+    std::cout << "request status: " << request_status << std::endl;
 
 
-    bool is_complete2 = isRequestComplete(request_buffer2);
-    std::cout << "is_complete: " << is_complete2 << std::endl;
-    bool is_complete3 = isRequestComplete(request_buffer3);
-    std::cout << "is_complete: " << is_complete3 << std::endl;
 
     return 0;
 }
