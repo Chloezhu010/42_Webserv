@@ -53,6 +53,7 @@ private:
 
     // parsed components
     std::string method_str_;
+    std::string full_uri_;
     std::string uri_;
     std::string query_string_;
     std::string http_version_;

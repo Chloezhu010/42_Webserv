@@ -132,24 +132,45 @@ RequestStatus isRequestComplete(const std::string& request_buffer) {
         return REQUEST_COMPLETE;
 }
 
+static size_t split_by_space(const std::string& str)
+{
+    int count = 1;
+
+    size_t first_space = str.find(' ');
+    if (first_space == std::string::npos)
+        return 0;
+    count++;
+    size_t second_space = str.find(' ', first_space + 1);
+    if (second_space == std::string::npos)
+        return count;
+    count++;
+    size_t third_space = str.find(' ', second_space + 1);
+    if (third_space == std::string::npos)
+        return count;
+    count++;
+    return count;
+}
 
 int main()
 {
     std::string request_buffer = 
-        "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+        "GET / HTTP/1.1";
     std::string request_buffer2 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 100\r\nconnection: close\r\n\r\nhello=world";
-    std::string request_buffer3 = 
-        "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 5\r\n\r\nhello=world";
+        "   ";
+    // std::string request_buffer3 = 
+    //     "POST / HTTP/1.1\r\nHost: localhost:8080\r\ncontent-length: 5\r\n\r\nhello=world";
 
-    size_t header_end = request_buffer2.find("\r\n\r\n");
-    size_t bodycomplete_status = checkBodyComplete(request_buffer2, header_end);
-    std::cout << "body status: " << bodycomplete_status << std::endl;
+    // size_t header_end = request_buffer2.find("\r\n\r\n");
+    // size_t bodycomplete_status = checkBodyComplete(request_buffer2, header_end);
+    // std::cout << "body status: " << bodycomplete_status << std::endl;
 
-    size_t request_status = isRequestComplete(request_buffer);
-    std::cout << "request status: " << request_status << std::endl;
+    // size_t request_status = isRequestComplete(request_buffer);
+    // std::cout << "request status: " << request_status << std::endl;
 
-
+    size_t split_count = split_by_space(request_buffer);
+    std::cout << "split count: " << split_count << std::endl;
+    size_t split_count2 = split_by_space(request_buffer2);
+    std::cout << "split count2: " << split_count2 << std::endl;
 
     return 0;
 }

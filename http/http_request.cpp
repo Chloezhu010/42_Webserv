@@ -126,4 +126,71 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         return REQUEST_COMPLETE;
 }
 
+// ============================================================================
+// Phase 2 Parsing                                                  
+// ============================================================================
 
+/* helper function: split the request line by space
+    - return the number of parts, split by space
+*/
+static std::vector<std::string> split_by_space(const std::string& str)
+{
+    // vector container to store the results
+    std::vector<std::string> results;
+    // if the string is empty, return empty vector
+    if (str.empty())
+        return results;
+    std::istringstream iss(str);
+    std::string token;
+    while (iss >> token) {
+        results.push_back(token);
+    }
+    return results;
+}
+
+/* parse the request line
+    - request line format: METHOD SP URI SP HTTP/VERSION CRLF
+    - return true if parsed successfully, false otherwise
+*/
+bool HttpRequest::parseRequestLine(const std::string& request_line)
+{
+    // cleanup trailing \r\n if any
+    std::string clean_line = request_line;
+    while (!clean_line.empty()
+                && (clean_line.back() == '\r' || clean_line.back() == '\n')) {
+        clean_line.pop_back();
+    }
+    // check for leading/ trailing space or empty line
+    if (clean_line.empty() || clean_line.front() == ' ' || clean_line.back() == ' ')
+        return false;
+
+    // split the request line by space
+    std::vector<std::string> parts = split_by_space(clean_line);
+    if (parts.size() != 3)
+        return false; // must be exactly 3 parts
+    
+    // check for empty parts
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (parts[i].empty())
+            return false; // empty part found
+    }
+      
+    // extract method
+    method_str_ = parts[0];
+
+    // extract url and query string
+    full_uri_ = parts[1];
+    size_t query_pos = full_uri_.find('?');
+    if (query_pos != std::string::npos) {
+        uri_ = full_uri_.substr(0, query_pos);
+        query_string_ = full_uri_.substr(query_pos + 1);
+    } else {
+        uri_ = full_uri_;
+        query_string_ = "";
+    }
+
+    // extract http version
+    http_version_ = parts[2];
+
+    return true;
+}
