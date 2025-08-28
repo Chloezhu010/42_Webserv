@@ -27,13 +27,6 @@ bool HttpRequest::isValidMethod(const std::string& method) const
     return false;
 }
 
-/* extract the http version from the header section */
-int HttpRequest::extractHTTPVersion(const std::string& header_section) const
-{
-    // find the 2nd space
-    size_t first_spac
-}
-
 /* only POST can have body, GET and DELETE cann't */
 bool HttpRequest::methodCanHaveBody(const std::string& method) const
 {
@@ -81,6 +74,43 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
     return content_length;
 }
 
+// RequestStatus HttpRequest::checkBodyComplete(const std::string& buffer, size_t header_end) const {
+//     /* extract the header section */
+//     std::string header_section = buffer.substr(0, header_end);
+    
+//     /* extract content length */
+//     long content_length = extractContentLength(header_section);
+//     if (content_length < 0) // invalid content-length
+//         return INVALID_REQUEST;
+//     if (content_length == 0) // no body needed
+//         return REQUEST_COMPLETE;
+//     if (content_length > MAX_BODY_SIZE) // exceed body size
+//         return REQUEST_TOO_LARGE;
+    
+//     /* check actual body vs content-length */
+//     size_t body_start = header_end + 4;
+//     size_t body_length = buffer.length() - body_start;
+//     if (body_length < content_length)
+//         return NEED_MORE_DATA;
+//     // else if (body_length >= content_length)
+//     return REQUEST_COMPLETE;
+// }
+
+// /* initial check if the http request is complete */
+// RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
+//     /* size check */
+//     if (request_buffer.length() > MAX_REQUEST_SIZE)
+//         return REQUEST_TOO_LARGE;
+    
+//     /* check header completeness */
+//     size_t header_end = request_buffer.find("\r\n\r\n");
+//     if (header_end == std::string::npos)
+//         return NEED_MORE_DATA;
+    
+//     /* check body completeness if needed */
+//     return checkBodyComplete(request_buffer, header_end);
+// }
+
 /* check if the http request is complete
     - return value: INCOMPLETE, COMPLETE, OVERSIZED, INVALID
     - check if the header is complete: TODO to enhance "host"
@@ -94,33 +124,32 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     // check if the header is complete
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
-        return INCOMPLETE;
+        return NEED_MORE_DATA;
     }
     // extract the method from the first line
     std::string method = extractMethod(request_buffer);
     if (method.empty()) {
-        return INVALID; // if cannot extract method, return false
+        return INVALID_REQUEST; // if cannot extract method, return false
     }
     if (!isValidMethod(method))
-        return INVALID; // if invalid method, return false (not supported)
+        return INVALID_REQUEST; // if invalid method, return false (not supported)
     // check if the method requires a body
     // for GET, DELETE that cannot have body, return true
     if (!methodCanHaveBody(method)) {
-        return COMPLETE;
+        return REQUEST_COMPLETE;
     }
     // for POST that can have body, check if Content-Length header is present
     std::string header_section = request_buffer.substr(0, header_end + 4); // keep "\r\n\r\n"
     long content_length = extractContentLength(header_section);
     if (content_length < 0)
-        return INVALID; // if invalid content length, return false
+        return INVALID_REQUEST; // if invalid content length, return false
     // check if received body length is equal to content length
     size_t body_start = header_end + 4; // after "\r\n\r\n"
     size_t received_body_length = request_buffer.length() - body_start;
     if (received_body_length < static_cast<size_t>(content_length))
-        return INCOMPLETE;
-    else if (received_body_length >= static_cast<size_t>(content_length))
-        return COMPLETE;
+        return NEED_MORE_DATA;
     else
-        return OVERSIZED;
+        return REQUEST_COMPLETE;
 }
+
 
