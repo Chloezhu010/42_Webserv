@@ -81,9 +81,6 @@ public:
     // check request completeness before parsing
     RequestStatus isRequestComplete(const std::string& request_buffer) const;
     
-    // // helpder functions for completeness
-    // RequestStatus checkBodyComplete(const std::string& buffer, size_t header_end) const;
-
     // data accumulation
     RequestStatus addData(const std::string& new_data);
     void clearBuffer();

@@ -1,5 +1,9 @@
 #include "http_request.hpp"
 
+// ============================================================================
+// Extraction methods                                                  
+// ============================================================================  
+
 /* extract the method from the request line
     - return empty string if not found
     - return GET, POST, DELETE etc, if found
@@ -17,9 +21,7 @@ std::string HttpRequest::extractMethod(const std::string& request_buffer) const
     return method;
 }
 
-/* check if the method is valid
-    - if false: 405 method not allowed
-*/
+/* check if the method is valid */
 bool HttpRequest::isValidMethod(const std::string& method) const
 {
     if (method == "GET" || method == "POST" || method == "DELETE")
@@ -74,51 +76,23 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
     return content_length;
 }
 
-// RequestStatus HttpRequest::checkBodyComplete(const std::string& buffer, size_t header_end) const {
-//     /* extract the header section */
-//     std::string header_section = buffer.substr(0, header_end);
-    
-//     /* extract content length */
-//     long content_length = extractContentLength(header_section);
-//     if (content_length < 0) // invalid content-length
-//         return INVALID_REQUEST;
-//     if (content_length == 0) // no body needed
-//         return REQUEST_COMPLETE;
-//     if (content_length > MAX_BODY_SIZE) // exceed body size
-//         return REQUEST_TOO_LARGE;
-    
-//     /* check actual body vs content-length */
-//     size_t body_start = header_end + 4;
-//     size_t body_length = buffer.length() - body_start;
-//     if (body_length < content_length)
-//         return NEED_MORE_DATA;
-//     // else if (body_length >= content_length)
-//     return REQUEST_COMPLETE;
-// }
-
-// /* initial check if the http request is complete */
-// RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
-//     /* size check */
-//     if (request_buffer.length() > MAX_REQUEST_SIZE)
-//         return REQUEST_TOO_LARGE;
-    
-//     /* check header completeness */
-//     size_t header_end = request_buffer.find("\r\n\r\n");
-//     if (header_end == std::string::npos)
-//         return NEED_MORE_DATA;
-    
-//     /* check body completeness if needed */
-//     return checkBodyComplete(request_buffer, header_end);
-// }
+// ============================================================================
+// Phase 1 Completeness check                                                  
+// ============================================================================
 
 /* check if the http request is complete
-    - return value: INCOMPLETE, COMPLETE, OVERSIZED, INVALID
-    - check if the header is complete: TODO to enhance "host"
-    - check if the method is valid: currently only support GET, POST, DELETE
-    - check for method that cannot have body
-    - check for method that can have body
-        - Presence of content-length
-        - Validation of content-length <> body
+    - basic check: header completeness
+    - basic method check: currently only support GET, POST, DELETE
+    - check if method can have body
+        - if GET, DELETE: can't have body
+        - if POST: can have body
+            - check content-legnth
+            - validation of content-length <> body
+    - return value: 
+        - NEED_MORE_DATA 0
+        - REQUEST_COMPLETE 1
+        - REQUEST_TOO_LARGE 2
+        - INVALID_REQUEST 3
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
     // check if the header is complete
