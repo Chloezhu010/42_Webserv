@@ -1,6 +1,18 @@
 #include "http_request.hpp"
 
 // ============================================================================
+// Constructors & Destructors                                                  
+// ============================================================================
+    
+HttpRequest::HttpRequest(): is_complete_(false), is_valid_(false),
+    validation_error_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false)
+{}
+
+HttpRequest::~HttpRequest()
+{}
+
+
+// ============================================================================
 // Extraction methods                                                  
 // ============================================================================  
 
@@ -256,42 +268,54 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
     for (size_t i = 0; i < lines.size(); i++)
     {
         line = lines[i];
+        
         // empty line terminates header section
         if (line.empty())
             break;
+        
         // check header size limit
         if (line.length() > MAX_HEADER_SIZE)
             return false; // header line too long
+        
         // find colon pos
         size_t colon_pos = line.find(':');
         if (colon_pos == std::string::npos)
             return false; // no colon found, invalid header
+        
         // extract header name and value
         std::string name = line.substr(0, colon_pos);
-        std::string value = line.substr(colon_pos + 1);
+        std::string value;
+        if (colon_pos + 1 < line.length())
+            value = line.substr(colon_pos + 1);
+        else
+            value = "";
+        
         // trim leading/trailing spaces & tabs from name & value
         size_t name_start = name.find_first_not_of(" \t\r\n");
         size_t name_end = name.find_last_not_of(" \t\r\n");
+        if (name_start == std::string::npos || name_end == std::string::npos)
+            return false; // invalid name
+        name = name.substr(name_start, name_end - name_start + 1);
+        
         size_t value_start = value.find_first_not_of(" \t\r\n");
         size_t value_end = value.find_last_not_of(" \t\r\n");
-        name = name.substr(name_start, name_end - name_start + 1);
-        value = value.substr(value_start, value_end - value_start + 1);
+        if (value_start == std::string::npos || value_end == std::string::npos)
+            value = ""; // empty value is valid    
+        else
+            value = value.substr(value_start, value_end - value_start + 1);
+        
         // check for empty name
         if (name.empty())
             return false; // empty name is invalid
+            
         // convert name to lower case for case-insensitive comparison
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
         // store the header in the map
         headers_[name] = value;
         // check header count limit
         if (headers_.size() > MAX_HEADER_COUNT)
-            return false; // too many headers
-        
-        return true;        
+            return false; // too many headers       
     }
-
-
-
-
+    
     return true;
 }
