@@ -194,3 +194,9 @@ bool HttpRequest::parseRequestLine(const std::string& request_line)
 
     return true;
 }
+
+bool HttpRequest::parseHeaders(const std::string& header_section)
+{
+    // split the header section by line
+    
+}
