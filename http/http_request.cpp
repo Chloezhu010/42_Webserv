@@ -92,6 +92,60 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
 // Phase 1 Completeness check                                                  
 // ============================================================================
 
+/* helper function: check if header contains chunked encoding 
+    - return true if found, false otherwise
+*/
+static bool hasChunkedEncoding(const std::string& header_section)
+{
+    // convert header_section to lower case for case-insensitive search
+    std::string lower_header = header_section;
+    std::transform(lower_header.begin(), lower_header.end(), lower_header.begin(), ::tolower);
+    // find "transfer-encoding:" in the header section
+    size_t pos = lower_header.find("transfer-encoding:");
+    if (pos == std::string::npos)
+        return false; // not found
+    // find the value after "transfer-encoding:"
+    size_t line_end = lower_header.find("\r\n", pos); // find the end of the line
+    if (line_end == std::string::npos)
+        return false; // invalid format
+    // extract the value after "transfer-encoding:"
+    std::string te_value = lower_header.substr(pos, line_end - pos);
+    // if value contains chunked and chunked is the last word
+    return (te_value.find("chunked") != std::string::npos);
+}
+
+/* helper function: basic check if the chunked body is complete
+    - return REQUEST_COMPLETE if complete
+    - return NEED_MORE_DATA if not complete
+*/
+RequestStatus HttpRequest::isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) const {
+    size_t body_start = header_end + 4; // after "\r\n\r\n"
+    // extract the body part
+    std::string body_part = request_buffer.substr(body_start);
+    // look for final chunk
+    size_t final_chunk_pos = body_part.find("0\r\n");
+    if (final_chunk_pos == std::string::npos)
+        return NEED_MORE_DATA;
+    // check if the final chunk is followed by "\r\n\r\n"
+    size_t trailer_pos = body_part.find("\r\n\r\n", final_chunk_pos);
+    if (trailer_pos != std::string::npos)
+        return REQUEST_COMPLETE;
+    return NEED_MORE_DATA;
+}
+
+/* helper function: basic check if the content-length body is complete
+    - return REQUEST_COMPLETE if complete
+    - return NEED_MORE_DATA if not complete
+*/
+RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length) const
+{
+    size_t body_start = header_end + 4; // after "\r\n\r\n"
+    size_t received_body_length = request_buffer.length() - body_start;
+    if (received_body_length < static_cast<size_t>(content_length))
+        return NEED_MORE_DATA;
+    return REQUEST_COMPLETE;
+}
+
 /* check if the http request is complete
     - basic check: header completeness
     - basic method check: currently only support GET, POST, DELETE
@@ -107,35 +161,43 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
         - INVALID_REQUEST 3
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
-    // check if the header is complete
+    // 1. check if the header is complete
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
         return NEED_MORE_DATA;
     }
-    // extract the method from the first line
+    // 2. basic method check
     std::string method = extractMethod(request_buffer);
     if (method.empty()) {
         return INVALID_REQUEST; // if cannot extract method, return false
     }
     if (!isValidMethod(method))
         return INVALID_REQUEST; // if invalid method, return false (not supported)
-    // check if the method requires a body
+    // 3. check if the method requires a body
     // for GET, DELETE that cannot have body, return true
     if (!methodCanHaveBody(method)) {
         return REQUEST_COMPLETE;
     }
-    // for POST that can have body, check if Content-Length header is present
+    // 4. for POST that can have body
     std::string header_section = request_buffer.substr(0, header_end + 4); // keep "\r\n\r\n"
-    long content_length = extractContentLength(header_section);
-    if (content_length < 0)
-        return INVALID_REQUEST; // if invalid content length, return false
-    // check if received body length is equal to content length
-    size_t body_start = header_end + 4; // after "\r\n\r\n"
-    size_t received_body_length = request_buffer.length() - body_start;
-    if (received_body_length < static_cast<size_t>(content_length))
-        return NEED_MORE_DATA;
+    // 5. check for conflicting headers
+    bool has_chunked_encoding = hasChunkedEncoding(header_section);
+    bool has_content_length = extractContentLength(header_section) >= 0;
+    if (has_chunked_encoding && has_content_length)
+        return INVALID_REQUEST; // conflicting headers
+    // 6. if chunked, check if the body is complete
+    if (hasChunkedEncoding(header_section))
+        // 6a. check if the chunked body is complete
+        return isChunkedBodyComplete(request_buffer, header_end);
     else
-        return REQUEST_COMPLETE;
+    {
+         // 7. if not chunked, check content-length
+        long content_length = extractContentLength(header_section);
+        if (content_length < 0)
+            return INVALID_REQUEST; // if invalid content length, return false
+        // 7a. check if received body length is equal to content length
+        return isContentLengthBodyComplete(request_buffer, header_end, content_length);
+    }
 }
 
 // ============================================================================

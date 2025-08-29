@@ -82,6 +82,8 @@ public:
     
     // check request completeness before parsing
     RequestStatus isRequestComplete(const std::string& request_buffer) const;
+    RequestStatus isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) const;
+    RequestStatus isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length) const;
     
     // data accumulation
     RequestStatus addData(const std::string& new_data);
