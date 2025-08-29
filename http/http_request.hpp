@@ -37,7 +37,7 @@ enum ValidationResult {
 // constants (TBD)
 const size_t MAX_REQUEST_SIZE = 8*1024*1024;
 const size_t MAX_HEADER_SIZE =8*1024;
-const size_t MAX_HEADER = 100;
+const size_t MAX_HEADER_COUNT = 100; 
 const size_t MAX_URI_LENGTH = 2048;
 const size_t MAX_BODY_SIZE = 10*1024*1024;
 

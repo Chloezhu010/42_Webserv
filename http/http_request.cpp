@@ -195,8 +195,103 @@ bool HttpRequest::parseRequestLine(const std::string& request_line)
     return true;
 }
 
+// helper function: split the header section into lines
+static std::vector<std::string> splitIntoLines(const std::string& str)
+{
+    std::vector<std::string> results;
+    // if the string is empty, return empty vector
+    if (str.empty())
+        return results;
+    // split by \r\n, handle cases with only \n or only \r
+    size_t start = 0;
+    size_t end = 0;
+    while (end < str.length())
+    {
+        // standard line ending \r\n
+        if (str[end] == '\r' && end + 1 < str.length() && str[end + 1] == '\n')
+        {
+            results.push_back(str.substr(start, end - start));
+            end += 2; // skip \r\n
+            start = end;
+        }
+        // handle lone \n
+        else if (str[end] == '\n') 
+        {
+            results.push_back(str.substr(start, end - start));
+            end += 1; // skip \n
+            start = end;
+        }
+        // handle lone \r
+        else if (str[end] == '\r')
+        {
+            results.push_back(str.substr(start, end - start));
+            end += 1; // skip \r
+            start = end;
+        }
+        else
+        {
+            end++;
+        }
+    }
+    // add the last line if any
+    if (start < str.length())
+        results.push_back(str.substr(start));
+    
+    return results;
+}
+
+/* parse the header section
+    - header section format: (header-name ":" OWS header-value OWS CRLF)* 
+    - return true if parsed successfully, false otherwise
+*/
 bool HttpRequest::parseHeaders(const std::string& header_section)
 {
-    // split the header section by line
+    // check for empty header section
+    if (header_section.empty())
+        return true; // no header is valid
     
+    // split the header section by line
+    std::vector<std::string> lines = splitIntoLines(header_section);
+    std::string line;
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        line = lines[i];
+        // empty line terminates header section
+        if (line.empty())
+            break;
+        // check header size limit
+        if (line.length() > MAX_HEADER_SIZE)
+            return false; // header line too long
+        // find colon pos
+        size_t colon_pos = line.find(':');
+        if (colon_pos == std::string::npos)
+            return false; // no colon found, invalid header
+        // extract header name and value
+        std::string name = line.substr(0, colon_pos);
+        std::string value = line.substr(colon_pos + 1);
+        // trim leading/trailing spaces & tabs from name & value
+        size_t name_start = name.find_first_not_of(" \t\r\n");
+        size_t name_end = name.find_last_not_of(" \t\r\n");
+        size_t value_start = value.find_first_not_of(" \t\r\n");
+        size_t value_end = value.find_last_not_of(" \t\r\n");
+        name = name.substr(name_start, name_end - name_start + 1);
+        value = value.substr(value_start, value_end - value_start + 1);
+        // check for empty name
+        if (name.empty())
+            return false; // empty name is invalid
+        // convert name to lower case for case-insensitive comparison
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+        // store the header in the map
+        headers_[name] = value;
+        // check header count limit
+        if (headers_.size() > MAX_HEADER_COUNT)
+            return false; // too many headers
+        
+        return true;        
+    }
+
+
+
+
+    return true;
 }
