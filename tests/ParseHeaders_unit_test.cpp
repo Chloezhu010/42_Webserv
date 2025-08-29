@@ -298,45 +298,25 @@ void testHeaderParsing() {
     
     for (size_t i = 0; i < test_cases.size(); ++i) {
         const HeaderTestCase& test = test_cases[i];
-        std::cout << "DEBUG: Starting test " << i << ": " << test.name << std::endl;
-        std::cout << "DEBUG: Test data: [" << test.data << "]" << std::endl;
         
-        try {
-            // Clear any previous state
-            HttpRequest fresh_req;
-            
-            bool result = fresh_req.parseHeaders(test.data);
-            bool test_passed = (result == test.should_pass);
-            
-            if (test_passed) {
-                passed++;
-            }
-            
-            printTestResult(test.name, test_passed, test.description);
-            
-        } catch (const std::exception& e) {
-            std::cout << "❌ EXCEPTION in test " << test.name << ": " << e.what() << std::endl;
-            std::cout << "    Test data was: [" << test.data << "]" << std::endl;
-            return; // Stop testing on exception
+        // Clear any previous state
+        HttpRequest fresh_req;
+        
+        bool result = fresh_req.parseHeaders(test.data);
+        bool test_passed = (result == test.should_pass);
+        
+        if (test_passed) {
+            passed++;
         }
-        // // Clear any previous state
-        // HttpRequest fresh_req;
         
-        // bool result = fresh_req.parseHeaders(test.data);
-        // bool test_passed = (result == test.should_pass);
+        printTestResult(test.name, test_passed, test.description);
         
-        // if (test_passed) {
-        //     passed++;
-        // }
-        
-        // printTestResult(test.name, test_passed, test.description);
-        
-        // // Additional debug info for failures
-        // if (!test_passed) {
-        //     std::cout << "    Expected: " << (test.should_pass ? "PASS" : "FAIL") << std::endl;
-        //     std::cout << "    Got:      " << (result ? "PASS" : "FAIL") << std::endl;
-        //     std::cout << "    Data:     \"" << test.data.substr(0, 50) << "...\"" << std::endl;
-        // }
+        // Additional debug info for failures
+        if (!test_passed) {
+            std::cout << "    Expected: " << (test.should_pass ? "PASS" : "FAIL") << std::endl;
+            std::cout << "    Got:      " << (result ? "PASS" : "FAIL") << std::endl;
+            std::cout << "    Data:     \"" << test.data.substr(0, 50) << "...\"" << std::endl;
+        }
     }
     
     std::cout << "\nparseHeaders Results: " << passed << "/" << total << " passed" << std::endl;

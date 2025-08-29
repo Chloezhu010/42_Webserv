@@ -241,9 +241,7 @@ static std::vector<std::string> splitIntoLines(const std::string& str)
             start = end;
         }
         else
-        {
             end++;
-        }
     }
     // add the last line if any
     if (start < str.length())
@@ -255,6 +253,7 @@ static std::vector<std::string> splitIntoLines(const std::string& str)
 /* parse the header section
     - header section format: (header-name ":" OWS header-value OWS CRLF)* 
     - return true if parsed successfully, false otherwise
+    - name-value pairs stored in headers_ map
 */
 bool HttpRequest::parseHeaders(const std::string& header_section)
 {
@@ -295,15 +294,13 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         size_t name_end = name.find_last_not_of(" \t\r\n");
         if (name_start == std::string::npos || name_end == std::string::npos)
             return false; // invalid name
-        name = name.substr(name_start, name_end - name_start + 1);
-        
+        name = name.substr(name_start, name_end - name_start + 1);    
         size_t value_start = value.find_first_not_of(" \t\r\n");
         size_t value_end = value.find_last_not_of(" \t\r\n");
         if (value_start == std::string::npos || value_end == std::string::npos)
             value = ""; // empty value is valid    
         else
             value = value.substr(value_start, value_end - value_start + 1);
-        
         // check for empty name
         if (name.empty())
             return false; // empty name is invalid
@@ -319,3 +316,4 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
     
     return true;
 }
+

@@ -22,7 +22,7 @@ enum RequestStatus {
 
 enum ValidationResult {
     NOT_VALIDATED,
-    VALID_REQUEST,
+    VALID_REQUEST, // 200
     INVALID_METHOD, // 405
     INVALID_REQUEST_LINE, // 400
     INVALID_HTTP_VERSION, // 505
