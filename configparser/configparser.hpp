@@ -80,6 +80,13 @@ private:
     void parseRedirect(LocationConfig& location, const std::vector<std::string>& args);
     void parseCgiPass(LocationConfig& location, const std::vector<std::string>& args);
 	
+	bool parseListenWithValidation(ServerConfig& server, const std::vector<std::string>& args);
+    bool parseErrorPageWithValidation(ServerConfig& server, const std::vector<std::string>& args);
+    bool parseAllowMethodsWithValidation(LocationConfig& location, const std::vector<std::string>& args);
+
+	bool isValidPortString(const std::string& portStr);
+    bool isValidIPAddress(const std::string& ip);
+
     // 工具方法
     std::vector<std::string> getDirectiveArgs();
     size_t parseSize(const std::string& sizeStr);

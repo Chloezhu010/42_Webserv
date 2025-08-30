@@ -1,7 +1,7 @@
 #include "config.hpp"
 #include <iostream>
 #include <iomanip>
-
+#include <cstdio>  
 // 辅助函数：打印缩进
 void printIndent(size_t level) {
     for (size_t i = 0; i < level * 2; ++i) {
@@ -14,6 +14,31 @@ void printSeparator(const std::string& title, char separator = '=') {
     std::cout << std::string(50, separator) << std::endl;
     std::cout << " " << title << std::endl;
     std::cout << std::string(50, separator) << std::endl;
+}
+
+std::string intToString(int value) {
+    if (value == 0) {
+        return "0";
+    }
+    
+    std::string result;
+    bool negative = false;
+    
+    if (value < 0) {
+        negative = true;
+        value = -value;
+    }
+    
+    while (value > 0) {
+        result = static_cast<char>('0' + (value % 10)) + result;
+        value /= 10;
+    }
+    
+    if (negative) {
+        result = "-" + result;
+    }
+    
+    return result;
 }
 
 // 显示LocationConfig的所有参数
@@ -71,10 +96,12 @@ void displayLocationConfig(const LocationConfig& location, size_t indent) {
 
 // 显示ServerConfig的所有参数
 void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
-    printSeparator("SERVER #" + std::string(1, '0' + serverIndex + 1) + " CONFIGURATION", '=');
+    // 使用手动实现的转换函数
+    std::string title = "SERVER #" + intToString(static_cast<int>(serverIndex + 1)) + " CONFIGURATION";
+    printSeparator(title, '=');
     
     // 监听端口
-    std::cout << "🚪 Listen Ports (" << server.listen.size() << "): ";
+    std::cout << "Listen Ports (" << server.listen.size() << "): ";
     if (server.listen.empty()) {
         std::cout << "(none)" << std::endl;
     } else {
@@ -86,7 +113,7 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     }
     
     // 服务器名称
-    std::cout << "🏷️  Server Names (" << server.serverName.size() << "): ";
+    std::cout << "Server Names (" << server.serverName.size() << "): ";
     if (server.serverName.empty()) {
         std::cout << "(default server)" << std::endl;
     } else {
@@ -97,7 +124,7 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     }
     
     // 客户端最大请求体大小
-    std::cout << "📦 Client Max Body Size: " << server.clientMaxBodySize << " bytes";
+    std::cout << "Client Max Body Size: " << server.clientMaxBodySize << " bytes";
     if (server.clientMaxBodySize >= 1024 * 1024) {
         std::cout << " (" << (server.clientMaxBodySize / (1024 * 1024)) << " MB)";
     } else if (server.clientMaxBodySize >= 1024) {
@@ -106,10 +133,10 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     std::cout << std::endl;
     
     // 根目录
-    std::cout << "📁 Root Directory: \"" << server.root << "\"" << std::endl;
+    std::cout << "Root Directory: \"" << server.root << "\"" << std::endl;
     
     // 默认索引文件
-    std::cout << "📄 Default Index Files (" << server.index.size() << "): ";
+    std::cout << "Default Index Files (" << server.index.size() << "): ";
     if (server.index.empty()) {
         std::cout << "(none)" << std::endl;
     } else {
@@ -120,7 +147,7 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     }
     
     // 错误页面配置
-    std::cout << "❌ Custom Error Pages (" << server.errorPages.size() << "): ";
+    std::cout << "Custom Error Pages (" << server.errorPages.size() << "): ";
     if (server.errorPages.empty()) {
         std::cout << "(none - using default)" << std::endl;
     } else {
@@ -133,7 +160,8 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     
     // Location配置
     std::cout << std::endl;
-    printSeparator("LOCATIONS (" + std::string(1, '0' + server.locations.size()) + ")", '-');
+    std::string locationTitle = "LOCATIONS (" + intToString(static_cast<int>(server.locations.size())) + ")";
+    printSeparator(locationTitle, '-');
     
     if (server.locations.empty()) {
         std::cout << "  (No locations configured)" << std::endl;

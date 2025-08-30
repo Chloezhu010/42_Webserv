@@ -157,7 +157,31 @@ std::string ConfigParser::readNumber(const std::string& content, size_t& pos) {
         currentColumn++;
     }
     
-    // ✅ 新增：读取单位后缀（如果存在）
+    // 检查是否是 IP:port 格式
+    if (pos < content.length() && content[pos] == ':') {
+        // 检查是否看起来像 IP 地址
+        size_t dotCount = 0;
+        for (size_t i = 0; i < number.length(); ++i) {
+            if (number[i] == '.') dotCount++;
+        }
+        
+        // 如果有3个点，很可能是 IP 地址，继续读取端口
+        if (dotCount == 3) {
+            number += content[pos]; // 添加 ':'
+            pos++;
+            currentColumn++;
+            
+            // 继续读取端口号
+            while (pos < content.length() && isDigit(content[pos])) {
+                number += content[pos];
+                pos++;
+                currentColumn++;
+            }
+            return number;
+        }
+    }
+    
+    // 原来的单位后缀处理
     if (pos < content.length()) {
         char nextChar = std::tolower(content[pos]);
         if (nextChar == 'k' || nextChar == 'm' || nextChar == 'g') {
@@ -247,7 +271,7 @@ bool ConfigParser::parseServer(ServerConfig& server) {
                 consumeToken(); // 消费 "location"
                 
                 if (currentToken().type != TOKEN_WORD) {
-                    printError("Expected location path");
+                    printError("期望location路径");
                     return false;
                 }
                 
@@ -269,11 +293,11 @@ bool ConfigParser::parseServer(ServerConfig& server) {
                 server.addLocation(location);
             } else {
                 if (!parseServerDirective(server)) {
-                    return false;
+                    return false;  // 传播错误
                 }
             }
         } else {
-            printError("Expected directive name");
+            printError("期望指令名称");
             return false;
         }
     }
@@ -284,9 +308,94 @@ bool ConfigParser::parseServer(ServerConfig& server) {
 bool ConfigParser::parseLocation(LocationConfig& location) {
     while (currentToken().type != TOKEN_RBRACE && currentToken().type != TOKEN_EOF) {
         if (!parseLocationDirective(location)) {
+            return false;  // 传播错误
+        }
+    }
+    return true;
+}
+
+bool ConfigParser::parseListenWithValidation(ServerConfig& server, const std::vector<std::string>& args) {
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string& portStr = args[i];
+        
+        // 检查是否为纯数字
+        if (portStr.empty()) {
+            printError("端口号不能为空");
+            return false;
+        }
+        
+        // 验证字符串只包含数字
+        for (size_t j = 0; j < portStr.length(); ++j) {
+            if (!std::isdigit(portStr[j])) {
+                printError("无效的端口号格式: " + portStr + " (只允许数字)");
+                return false;
+            }
+        }
+        
+        // 转换为整数并验证范围
+        long port = std::strtol(portStr.c_str(), NULL, 10);
+        if (port <= 0 || port > 65535) {
+            printError("端口号超出范围(1-65535): " + portStr);
+            return false;
+        }
+        
+        server.addListenPort(static_cast<int>(port));
+    }
+    return true;
+}
+
+bool ConfigParser::parseErrorPageWithValidation(ServerConfig& server, const std::vector<std::string>& args) {
+    // 验证错误码
+    const std::string& errorCodeStr = args[0];
+    
+    // 检查错误码是否为数字
+    for (size_t i = 0; i < errorCodeStr.length(); ++i) {
+        if (!std::isdigit(errorCodeStr[i])) {
+            printError("无效的错误码格式: " + errorCodeStr);
             return false;
         }
     }
+    
+    int errorCode = stringToInt(errorCodeStr);
+    if (errorCode < 100 || errorCode > 599) {
+        printError("HTTP错误码超出范围(100-599): " + errorCodeStr);
+        return false;
+    }
+    
+    server.addErrorPage(errorCode, args[1]);
+    return true;
+}
+
+bool ConfigParser::parseAllowMethodsWithValidation(LocationConfig& location, const std::vector<std::string>& args) {
+    // 验证HTTP方法
+    std::vector<std::string> validMethods;
+    validMethods.push_back("GET");
+    validMethods.push_back("POST");
+    validMethods.push_back("PUT");
+    validMethods.push_back("DELETE");
+    validMethods.push_back("HEAD");
+    validMethods.push_back("OPTIONS");
+    validMethods.push_back("PATCH");
+    
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string& method = args[i];
+        bool isValid = false;
+        
+        // 检查是否为有效的HTTP方法
+        for (size_t j = 0; j < validMethods.size(); ++j) {
+            if (method == validMethods[j]) {
+                isValid = true;
+                break;
+            }
+        }
+        
+        if (!isValid) {
+            printError("无效的HTTP方法: " + method);
+            return false;
+        }
+    }
+    
+    location.allowMethods = args;
     return true;
 }
 
@@ -296,24 +405,53 @@ bool ConfigParser::parseServerDirective(ServerConfig& server) {
     
     std::vector<std::string> args = getDirectiveArgs();
     
-    if (!expectSemicolon()) {
+    // 为需要参数的指令添加参数数量验证
+    if (directive == "listen") {
+        if (args.empty()) {
+            printError("listen指令至少需要一个参数");
+            return false;
+        }
+        if (!parseListenWithValidation(server, args)) {
+            return false;
+        }
+    } else if (directive == "server_name") {
+        if (args.empty()) {
+            printError("server_name指令至少需要一个参数");
+            return false;
+        }
+        parseServerName(server, args);
+    } else if (directive == "root") {
+        if (args.empty()) {
+            printError("root指令需要一个参数");
+            return false;
+        }
+        parseRoot(server.root, args);
+    } else if (directive == "index") {
+        if (args.empty()) {
+            printError("index指令至少需要一个参数");
+            return false;
+        }
+        parseIndex(server.index, args);
+    } else if (directive == "client_max_body_size") {
+        if (args.empty()) {
+            printError("client_max_body_size指令需要一个参数");
+            return false;
+        }
+        parseClientMaxBodySize(server, args);
+    } else if (directive == "error_page") {
+        if (args.size() < 2) {
+            printError("error_page指令需要至少两个参数（错误码和页面路径）");
+            return false;
+        }
+        if (!parseErrorPageWithValidation(server, args)) {
+            return false;
+        }
+    } else {
+        printError("未知的服务器指令: " + directive);
         return false;
     }
     
-    if (directive == "listen") {
-        parseListen(server, args);
-    } else if (directive == "server_name") {
-        parseServerName(server, args);
-    } else if (directive == "root") {
-        parseRoot(server.root, args);
-    } else if (directive == "index") {
-        parseIndex(server.index, args);
-    } else if (directive == "client_max_body_size") {
-        parseClientMaxBodySize(server, args);
-    } else if (directive == "error_page") {
-        parseErrorPage(server, args);
-    } else {
-        printError("Unknown server directive: " + directive);
+    if (!expectSemicolon()) {
         return false;
     }
     
@@ -340,26 +478,57 @@ bool ConfigParser::parseLocationDirective(LocationConfig& location) {
     
     std::vector<std::string> args = getDirectiveArgs();
     
-    if (!expectSemicolon()) {
+    // 为需要参数的指令添加参数验证
+    if (directive == "root") {
+        if (args.empty()) {
+            printError("root指令需要一个参数");
+            return false;
+        }
+        parseRoot(location.root, args);
+    } else if (directive == "index") {
+        if (args.empty()) {
+            printError("index指令至少需要一个参数");
+            return false;
+        }
+        parseIndex(location.index, args);
+    } else if (directive == "allow_methods") {
+        if (args.empty()) {
+            printError("allow_methods指令至少需要一个参数");
+            return false;
+        }
+        if (!parseAllowMethodsWithValidation(location, args)) {
+            return false;
+        }
+    } else if (directive == "autoindex") {
+        if (args.empty()) {
+            printError("autoindex指令需要一个参数");
+            return false;
+        }
+        parseAutoindex(location, args);
+    } else if (directive == "cgi") {
+        if (args.size() < 2) {
+            printError("cgi指令需要两个参数（扩展名和程序路径）");
+            return false;
+        }
+        parseCgi(location, args);
+    } else if (directive == "cgi_pass") {
+        if (args.empty()) {
+            printError("cgi_pass指令需要一个参数");
+            return false;
+        }
+        parseCgiPass(location, args);
+    } else if (directive == "return" || directive == "redirect") {
+        if (args.empty()) {
+            printError(directive + "指令需要一个参数");
+            return false;
+        }
+        parseRedirect(location, args);
+    } else {
+        printError("未知的location指令: " + directive);
         return false;
     }
     
-    if (directive == "root") {
-        parseRoot(location.root, args);
-    } else if (directive == "index") {
-        parseIndex(location.index, args);
-    } else if (directive == "allow_methods") {
-        parseAllowMethods(location, args);
-    } else if (directive == "autoindex") {
-        parseAutoindex(location, args);
-    } else if (directive == "cgi") {
-        parseCgi(location, args);
-	} else if (directive == "cgi_pass") {
-        parseCgiPass(location, args); 
-    } else if (directive == "return" || directive == "redirect") {
-        parseRedirect(location, args);
-    } else {
-        printError("Unknown location directive: " + directive);
+    if (!expectSemicolon()) {
         return false;
     }
     
