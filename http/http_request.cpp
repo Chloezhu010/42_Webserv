@@ -384,9 +384,32 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
     return true;
 }
 
+/* helper function: parse hex to decimal */
+static long parseHexToDecimal(const std::string& hex_line)
+{
+
+}
+
 /* helper function: parse the chunked encoding body */
 bool HttpRequest::decodeChunkedBody(const std::string& body_section)
 {
+// 1. clear the state
+    body_.clear();
+    size_t position = 0;
+// 2. loop through the body section to decode chunked data
+    while (position < body_section.length())
+    {
+        // read hex size line
+
+        // parse hex chunk size to decimal
+
+        // check for final chunk
+
+        // read chunk data
+
+        // validate chunk ending
+
+    }
 
 }
 
