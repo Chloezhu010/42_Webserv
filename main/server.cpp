@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
         while (server.isRunning()) {
             // 这里通常会有你的主事件循环
             // 现在我们只是sleep以防止忙等待
-            sleep(1);
+            server.run();
             
             // 你可能想要为WebServer添加run()或handleEvents()方法
             // 使用select/epoll处理客户端连接

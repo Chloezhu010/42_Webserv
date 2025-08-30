@@ -88,15 +88,22 @@ bool ServerInstance::startListening() {
     return true;
 }
 
-void ServerInstance::cleanup() {
-    for (size_t i = 0; i < socketFds.size(); ++i) {
-        int sockfd = socketFds[i];
-        if (sockfd != -1) {
-            close(sockfd);
-        }
+void WebServer::cleanup() {
+    // 关闭所有客户端连接
+    for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
+         it != clientConnections.end(); ++it) {
+        close(it->first);
+        delete it->second;
     }
-    socketFds.clear();
-    portToSocket.clear();
+    clientConnections.clear();
+    
+    // 清理服务器实例
+    for (size_t i = 0; i < servers.size(); ++i) {
+        ServerInstance* server = servers[i];
+        delete server;
+    }
+    servers.clear();
+    portToServers.clear();
 }
 
 bool ServerInstance::isListeningOnPort(int port) const {
@@ -386,13 +393,21 @@ void WebServer::stop() {
     std::cout << "WebServer stopped." << std::endl;
 }
 
-void WebServer::cleanup() {
-    for (size_t i = 0; i < servers.size(); ++i) {
-        ServerInstance* server = servers[i];
-        delete server;
+void ServerInstance::cleanup() {
+    // 关闭所有监听的socket文件描述符
+    for (size_t i = 0; i < socketFds.size(); ++i) {
+        int sockfd = socketFds[i];
+        if (sockfd != -1) {
+            close(sockfd);
+            std::cout << "Closed socket fd: " << sockfd << std::endl;
+        }
     }
-    servers.clear();
-    portToServers.clear();
+    
+    // 清空容器
+    socketFds.clear();
+    portToSocket.clear();
+    
+    std::cout << "ServerInstance cleanup completed" << std::endl;
 }
 
 ServerInstance* WebServer::findServerByHost(const std::string& hostHeader, int port) {
@@ -425,4 +440,309 @@ size_t WebServer::getServerCount() const {
 
 std::string WebServer::getLastError() const {
     return "Check console output for detailed error messages";
+}
+
+
+void WebServer::run() {
+    if (!running) {
+        std::cerr << "Server not running" << std::endl;
+        return;
+    }
+    
+    std::cout << "Starting main event loop..." << std::endl;
+    
+    // 初始化maxFd
+    updateMaxFd();
+    
+    while (running) {
+        // 清除fd集合
+        FD_ZERO(&readFds);
+        FD_ZERO(&writeFds);
+        
+        // 添加所有监听socket到读集合
+        for (size_t i = 0; i < servers.size(); ++i) {
+            const std::vector<int>& socketFds = servers[i]->getSocketFds();
+            for (size_t j = 0; j < socketFds.size(); ++j) {
+                int fd = socketFds[j];
+                FD_SET(fd, &readFds);
+            }
+        }
+        
+        // 添加客户端连接到相应集合
+        for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
+             it != clientConnections.end(); ++it) {
+            int fd = it->first;
+            ClientConnection* conn = it->second;
+            
+            if (!conn->request_complete) {
+                FD_SET(fd, &readFds);  // 等待读取请求
+            }
+            if (conn->response_ready && conn->bytes_sent < conn->response_buffer.size()) {
+                FD_SET(fd, &writeFds); // 等待发送响应
+            }
+        }
+        
+        // 设置超时
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+        
+        // 使用select监控文件描述符
+        int activity = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+        
+        if (activity < 0) {
+            if (errno == EINTR) {
+                continue; // 被信号中断，继续循环
+            }
+            std::cerr << "select() failed: " << strerror(errno) << std::endl;
+            break;
+        }
+        
+        if (activity == 0) {
+            // 超时，继续循环
+            continue;
+        }
+        
+        // 检查监听socket是否有新连接
+        for (size_t i = 0; i < servers.size(); ++i) {
+            const std::vector<int>& socketFds = servers[i]->getSocketFds();
+            for (size_t j = 0; j < socketFds.size(); ++j) {
+                int serverFd = socketFds[j];
+                if (FD_ISSET(serverFd, &readFds)) {
+                    handleNewConnection(serverFd);
+                }
+            }
+        }
+        
+        // 检查客户端连接事件
+        std::vector<int> fdsToRemove;
+        for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
+             it != clientConnections.end(); ++it) {
+            int clientFd = it->first;
+            
+            if (FD_ISSET(clientFd, &readFds)) {
+                handleClientRequest(clientFd);
+            }
+            if (FD_ISSET(clientFd, &writeFds)) {
+                handleClientResponse(clientFd);
+            }
+            
+            // 检查是否需要关闭连接
+            ClientConnection* conn = it->second;
+            if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
+                fdsToRemove.push_back(clientFd);
+            }
+        }
+        
+        // 关闭已完成的连接
+        for (size_t i = 0; i < fdsToRemove.size(); ++i) {
+            closeClientConnection(fdsToRemove[i]);
+        }
+    }
+    
+    std::cout << "Event loop ended." << std::endl;
+}
+
+void WebServer::handleNewConnection(int serverFd) {
+    struct sockaddr_in clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+    
+    int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
+    if (clientFd == -1) {
+        std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+        return;
+    }
+    
+    // 设置非阻塞模式
+    int flags = fcntl(clientFd, F_GETFL, 0);
+    if (flags == -1 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        std::cerr << "Failed to set non-blocking mode" << std::endl;
+        close(clientFd);
+        return;
+    }
+    
+    // 创建客户端连接对象
+    ClientConnection* conn = new ClientConnection(clientFd);
+    clientConnections[clientFd] = conn;
+    
+    // 更新maxFd
+    if (clientFd > maxFd) {
+        maxFd = clientFd;
+    }
+    
+    std::cout << "New connection accepted: fd=" << clientFd << std::endl;
+}
+
+void WebServer::handleClientRequest(int clientFd) {
+    ClientConnection* conn = clientConnections[clientFd];
+    if (!conn) return;
+    
+    char buffer[4096];
+    ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
+    
+    if (bytesRead <= 0) {
+        if (bytesRead == 0) {
+            std::cout << "Client disconnected: fd=" << clientFd << std::endl;
+        } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            std::cerr << "recv() failed: " << strerror(errno) << std::endl;
+        }
+        closeClientConnection(clientFd);
+        return;
+    }
+    
+    buffer[bytesRead] = '\0';
+    conn->request_buffer += buffer;
+    
+    // 检查是否收到完整的HTTP请求
+    if (conn->request_buffer.find("\r\n\r\n") != std::string::npos) {
+        conn->request_complete = true;
+        
+        // 解析并处理请求
+        if (parseHttpRequest(conn)) {
+            buildHttpResponse(conn);
+            conn->response_ready = true;
+        } else {
+            // 解析失败，发送400错误
+            conn->response_buffer = "HTTP/1.1 400 Bad Request\r\n"
+                                   "Content-Length: 0\r\n"
+                                   "Connection: close\r\n\r\n";
+            conn->response_ready = true;
+        }
+    }
+}
+
+void WebServer::handleClientResponse(int clientFd) {
+    ClientConnection* conn = clientConnections[clientFd];
+    if (!conn || !conn->response_ready) return;
+    
+    size_t remaining = conn->response_buffer.size() - conn->bytes_sent;
+    if (remaining == 0) return;
+    
+    const char* data = conn->response_buffer.c_str() + conn->bytes_sent;
+    ssize_t bytesSent = send(clientFd, data, remaining, 0);
+    
+    if (bytesSent > 0) {
+        conn->bytes_sent += bytesSent;
+        std::cout << "Sent " << bytesSent << " bytes to fd=" << clientFd << std::endl;
+    } else if (bytesSent == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        std::cerr << "send() failed: " << strerror(errno) << std::endl;
+        closeClientConnection(clientFd);
+    }
+}
+
+bool WebServer::parseHttpRequest(ClientConnection* conn) {
+    // 简单的HTTP请求解析
+    std::istringstream iss(conn->request_buffer);
+    std::string line;
+    
+    // 解析请求行
+    if (!std::getline(iss, line)) return false;
+    
+    std::istringstream requestLine(line);
+    std::string method, path, version;
+    requestLine >> method >> path >> version;
+    
+    if (method.empty() || path.empty()) return false;
+    
+    // 存储解析结果（你可以扩展ClientConnection结构体来存储这些信息）
+    // 这里简单存储在response_buffer中作为临时方案
+    conn->response_buffer = path; // 临时存储path
+    
+    std::cout << "Parsed request: " << method << " " << path << " " << version << std::endl;
+    return true;
+}
+
+void WebServer::buildHttpResponse(ClientConnection* conn) {
+    // 从临时存储中获取path
+    std::string path = conn->response_buffer;
+    conn->response_buffer.clear();
+    
+    // 处理根路径
+    if (path == "/") {
+        path = "/index.html";
+    }
+    
+    // 构建完整文件路径（使用第一个服务器的root配置）
+    std::string filePath = "./www" + path; // 可以改进为根据Host头选择正确的服务器
+    
+    // 尝试发送文件
+    sendStaticFile(conn, filePath);
+}
+
+void WebServer::sendStaticFile(ClientConnection* conn, const std::string& filePath) {
+    std::ifstream file(filePath.c_str(), std::ios::binary);
+    if (!file.is_open()) {
+        send404Response(conn);
+        return;
+    }
+    
+    // 获取文件大小
+    file.seekg(0, std::ios::end);
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    
+    // 读取文件内容
+    std::string content;
+    content.resize(fileSize);
+    file.read(&content[0], fileSize);
+    file.close();
+    
+    // 构建HTTP响应
+    std::ostringstream response;
+    response << "HTTP/1.1 200 OK\r\n";
+    response << "Content-Type: text/html\r\n";
+    response << "Content-Length: " << fileSize << "\r\n";
+    response << "Connection: close\r\n";
+    response << "\r\n";
+    response << content;
+    
+    conn->response_buffer = response.str();
+    std::cout << "Serving file: " << filePath << " (" << fileSize << " bytes)" << std::endl;
+}
+
+void WebServer::send404Response(ClientConnection* conn) {
+    std::string content = "<html><body><h1>404 Not Found</h1></body></html>";
+    
+    std::ostringstream response;
+    response << "HTTP/1.1 404 Not Found\r\n";
+    response << "Content-Type: text/html\r\n";
+    response << "Content-Length: " << content.length() << "\r\n";
+    response << "Connection: close\r\n";
+    response << "\r\n";
+    response << content;
+    
+    conn->response_buffer = response.str();
+}
+
+void WebServer::closeClientConnection(int clientFd) {
+    std::map<int, ClientConnection*>::iterator it = clientConnections.find(clientFd);
+    if (it != clientConnections.end()) {
+        delete it->second;
+        clientConnections.erase(it);
+    }
+    close(clientFd);
+    updateMaxFd();
+    std::cout << "Connection closed: fd=" << clientFd << std::endl;
+}
+
+void WebServer::updateMaxFd() {
+    maxFd = -1;
+    
+    // 检查监听socket
+    for (size_t i = 0; i < servers.size(); ++i) {
+        const std::vector<int>& socketFds = servers[i]->getSocketFds();
+        for (size_t j = 0; j < socketFds.size(); ++j) {
+            if (socketFds[j] > maxFd) {
+                maxFd = socketFds[j];
+            }
+        }
+    }
+    
+    // 检查客户端连接
+    for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
+         it != clientConnections.end(); ++it) {
+        if (it->first > maxFd) {
+            maxFd = it->first;
+        }
+    }
 }

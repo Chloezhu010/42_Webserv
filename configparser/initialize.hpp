@@ -3,6 +3,7 @@
 
 #include "config.hpp"
 #include "configparser.hpp"
+#include "../client/client_connection.hpp"
 #include <vector>
 #include <map>
 #include <sys/socket.h>
@@ -45,6 +46,20 @@ private:
     std::map<int, std::vector<ServerInstance*> > portToServers; // 端口到服务器的映射
     bool initialized;
     bool running;
+
+    std::map<int, ClientConnection*> clientConnections;  // fd -> 客户端连接
+    fd_set readFds, writeFds;                           // select用的fd集合
+    int maxFd;           
+	
+	void handleNewConnection(int serverFd);
+    void handleClientRequest(int clientFd);
+    void handleClientResponse(int clientFd);
+    void closeClientConnection(int clientFd);
+    bool parseHttpRequest(ClientConnection* conn);
+    void buildHttpResponse(ClientConnection* conn);
+    void sendStaticFile(ClientConnection* conn, const std::string& filePath);
+    void send404Response(ClientConnection* conn);
+    void updateMaxFd();// 最大fd值
     
     // 初始化辅助方法
     bool validateConfig();
@@ -73,6 +88,8 @@ public:
     size_t getServerCount() const;
     ServerInstance* findServerByHost(const std::string& hostHeader, int port);
     
+	void run();  // 主事件循环
+
     // 错误处理
     std::string getLastError() const;
 };

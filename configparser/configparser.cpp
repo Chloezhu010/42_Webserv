@@ -146,13 +146,27 @@ std::string ConfigParser::readWord(const std::string& content, size_t& pos) {
     return word;
 }
 
+// 增强版 readNumber 函数，支持单位处理
 std::string ConfigParser::readNumber(const std::string& content, size_t& pos) {
     std::string number;
+    
+    // 读取数字部分
     while (pos < content.length() && (isDigit(content[pos]) || content[pos] == '.')) {
         number += content[pos];
         pos++;
         currentColumn++;
     }
+    
+    // ✅ 新增：读取单位后缀（如果存在）
+    if (pos < content.length()) {
+        char nextChar = std::tolower(content[pos]);
+        if (nextChar == 'k' || nextChar == 'm' || nextChar == 'g') {
+            number += nextChar;
+            pos++;
+            currentColumn++;
+        }
+    }
+    
     return number;
 }
 
