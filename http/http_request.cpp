@@ -200,6 +200,7 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         long content_length = extractContentLength(header_section);
         if (content_length < 0)
             return INVALID_REQUEST; // if invalid content length, return false
+        content_length_ = content_length;
         // 7a. check if received body length is equal to content length
         return isContentLengthBodyComplete(request_buffer, header_end, content_length);
     }
@@ -384,10 +385,49 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
     return true;
 }
 
-/* helper function: parse hex to decimal */
+/* helper function: read chunked line
+    @return: the chunk size string, false if invalid
+*/
+static std::pair<std::string, bool> readChunkedSizeLine(const std::string& line, size_t& pos)
+{
+    // check if the line is empty
+    if (line.empty())
+        return std::make_pair("", false);
+    
+    // find the end of the line
+    size_t line_end = line.find("\r\n", pos);
+    if (line_end == std::string::npos)
+        return std::make_pair("", false); // incomplete line
+    // extract the size
+    std::string chunk_size_str = line.substr(pos, line_end - pos);
+    
+    return std::make_pair(chunk_size_str, true);
+}
+
+/* helper function: parse hex to decimal
+    @return: the decimal value, -1 if invalid
+*/
 static long parseHexToDecimal(const std::string& hex_line)
 {
-
+    // check if the hex line is empty
+    if (hex_line.empty())
+        return -1;
+    // convert hex to decimal
+    size_t result = 0;
+    for (size_t i = 0; i < hex_line.length(); i++)
+    {
+        char c = hex_line[i];
+        if (c >= '0' && c <= '9')
+            result = result * 16 + c - '0';
+        else if (c >= 'a' && c <= 'f')
+            result = result * 16 + c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F')
+            result = result * 16 + c - 'A' + 10;
+        else
+            return -1; // invalid hex character
+    }
+    // convert size_t to long
+    return static_cast<long>(result);
 }
 
 /* helper function: parse the chunked encoding body */
@@ -399,18 +439,48 @@ bool HttpRequest::decodeChunkedBody(const std::string& body_section)
 // 2. loop through the body section to decode chunked data
     while (position < body_section.length())
     {
-        // read hex size line
-
+    // read chunked size line
+        std::pair<std::string, bool> chunk_size_line = readChunkedSizeLine(body_section, position);
+        // check invalid line    
+        if (!chunk_size_line.second)
+            return false; // invalid line
+        // handle valid line
+        std::string chunk_size_str = chunk_size_line.first;
+        position += chunk_size_str.length() + 2; // skip line + \r\n
         // parse hex chunk size to decimal
-
+        long chunk_size = parseHexToDecimal(chunk_size_str);
+        if (chunk_size < 0)
+            return false; // invalid chunk size
         // check for final chunk
+        if (chunk_size == 0)
+        {
+            // final chunk must be followed by "\r\n"
+            std::string trailer_line = body_section.substr(position, 2);
+            if (trailer_line != "\r\n")
+                return false; // invalid trailer
+            // check if there is still room for another "\r\n"
+            if (position + 2 > body_section.length())
+                return false; // missing final "\r\n"
+            return true; // final chunk found
+        }
+        // validate chunk data availability
 
-        // read chunk data
+        // extract chunk data
+        std::string chunk_data = body_section.substr(position, chunk_size);
+        body_.append(chunk_data); // append chunk data into body_
+        position += chunk_size; // move past chunk data
 
         // validate chunk ending
+        if (body_section.substr(position, 2) != "\r\n")
+            return false; // chunk must end with \r\n
 
+        position += 2; // move past \r\n
+        // check against max chunk size
+        if (body_.length() > MAX_BODY_SIZE)
+            return false;
     }
-
+// 3. reach end without finding final chunk
+    return false;
 }
 
 /* helper function: parse content-length body */
@@ -463,14 +533,14 @@ bool HttpRequest::parseBody(const std::string& body_section)
     }
 
 // enforce size limit early
-    if (content_length_ > MAX_BODY_SIZE)
+    if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
         return false; // content exceed max size limit
     
 // for POST: parse body based on type
     // if transfer-encoding
     if (chunked_encoding_)
     {
-
+        return decodeChunkedBody(body_section);
     }
     // if content-length
     else if (content_length_ >= 0)
@@ -480,4 +550,14 @@ bool HttpRequest::parseBody(const std::string& body_section)
     // POST without content-length
     else
         return false;
+}
+
+
+
+// ============================================================================
+// Getters                                                  
+// ============================================================================
+
+const std::string& HttpRequest::getBody() const {
+    return body_;
 }

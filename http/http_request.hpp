@@ -6,13 +6,8 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <utility>
 
-// enum RequestStatus {
-//     INCOMPLETE, //0
-//     COMPLETE, //1
-//     OVERSIZED, //2
-//     INVALID, //3
-// };
 enum RequestStatus {
     NEED_MORE_DATA,
     REQUEST_COMPLETE,
