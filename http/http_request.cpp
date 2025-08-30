@@ -160,7 +160,7 @@ RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& reques
         - REQUEST_TOO_LARGE 2
         - INVALID_REQUEST 3
 */
-RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) const {
+RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) {
     // 1. check if the header is complete
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
@@ -187,11 +187,16 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         return INVALID_REQUEST; // conflicting headers
     // 6. if chunked, check if the body is complete
     if (hasChunkedEncoding(header_section))
-        // 6a. check if the chunked body is complete
+    {
+        // 6a. set flags
+        chunked_encoding_ = true;
+        content_length_ = -1;
+        // 6b. check if the chunked body is complete
         return isChunkedBodyComplete(request_buffer, header_end);
+    }
     else
     {
-         // 7. if not chunked, check content-length
+        // 7. if not chunked, check content-length
         long content_length = extractContentLength(header_section);
         if (content_length < 0)
             return INVALID_REQUEST; // if invalid content length, return false
@@ -379,3 +384,77 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
     return true;
 }
 
+/* helper function: parse the chunked encoding body */
+bool HttpRequest::decodeChunkedBody(const std::string& body_section)
+{
+
+}
+
+/* helper function: parse content-length body */
+bool HttpRequest::parseContentLengthBody(const std::string& body_section)
+{
+    // 1. validate content length was set
+    if (content_length_ < 0)
+        return false;
+
+    // 2. handle zero-length body
+    if (content_length_ == 0)
+    {
+        if (body_section.length() > 0)
+            return false;
+        body_ = "";
+        return true;
+    }
+
+    // 3. check if have enough data (checked in isRequestComplete)
+    // 4. check if have too much data (checked in isRequestComplete)
+
+    // 5. parse the exact amount of body data
+    body_ = body_section.substr(0, content_length_);
+
+    // 6. validate body size limits
+    if (body_.length() > MAX_BODY_SIZE)
+        return false;
+        
+    return true;
+}
+
+/* parse the body 
+    - return true if parsed successfully, false otherwise
+    - body stored in std::string body_
+*/
+bool HttpRequest::parseBody(const std::string& body_section)
+{
+// validate header non-conflicting
+    if (chunked_encoding_ && content_length_ >= 0)
+        return false;
+
+// check if the method can have body
+    // for GET & DELETE
+    if (!methodCanHaveBody(method_str_))
+    {
+        if (chunked_encoding_ || content_length_ >= 0)
+            return false; // GET, DELETE shouldn't have body
+        body_ = "";
+        return true;
+    }
+
+// enforce size limit early
+    if (content_length_ > MAX_BODY_SIZE)
+        return false; // content exceed max size limit
+    
+// for POST: parse body based on type
+    // if transfer-encoding
+    if (chunked_encoding_)
+    {
+
+    }
+    // if content-length
+    else if (content_length_ >= 0)
+    {
+        return parseContentLengthBody(body_section);
+    }
+    // POST without content-length
+    else
+        return false;
+}

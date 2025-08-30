@@ -81,7 +81,7 @@ public:
     // ============================================================================
     
     // check request completeness before parsing
-    RequestStatus isRequestComplete(const std::string& request_buffer) const;
+    RequestStatus isRequestComplete(const std::string& request_buffer);
     RequestStatus isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) const;
     RequestStatus isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length) const;
     
@@ -99,8 +99,12 @@ public:
     // component parsing
     bool parseRequestLine(const std::string& request_line);
     bool parseHeaders(const std::string& header_section);
-    bool parseBody();
+    bool parseBody(const std::string& body_section);
     
+    // parsing help function
+    bool decodeChunkedBody(const std::string& body_section);
+    bool parseContentLengthBody(const std::string& body_section);
+
     // ============================================================================
     // Phase 3 Validation                                                  
     // ============================================================================
@@ -164,6 +168,8 @@ public:
     // ============================================================================
     // Helpers                                        
     // ============================================================================
+
+    
 
 };
 
