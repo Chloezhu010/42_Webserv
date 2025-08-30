@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 /* helper function: split the request line by space
     - return the number of parts, split by space

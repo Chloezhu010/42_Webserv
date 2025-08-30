@@ -231,11 +231,11 @@ bool HttpRequest::parseRequestLine(const std::string& request_line)
     // cleanup trailing \r\n if any
     std::string clean_line = request_line;
     while (!clean_line.empty()
-                && (clean_line.back() == '\r' || clean_line.back() == '\n')) {
-        clean_line.pop_back();
+                && (clean_line[clean_line.length() - 1] == '\r' || clean_line[clean_line.length() - 1] == '\n')) {
+        clean_line.erase(clean_line.length() - 1);
     }
     // check for leading/ trailing space or empty line
-    if (clean_line.empty() || clean_line.front() == ' ' || clean_line.back() == ' ')
+    if (clean_line.empty() || clean_line[0] == ' ' || clean_line[clean_line.length() - 1] == ' ')
         return false;
 
     // split the request line by space
