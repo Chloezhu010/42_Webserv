@@ -188,10 +188,7 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     // 6. if chunked, check if the body is complete
     if (hasChunkedEncoding(header_section))
     {
-        // 6a. set flags
-        chunked_encoding_ = true;
-        content_length_ = -1;
-        // 6b. check if the chunked body is complete
+        // 6a. check if the chunked body is complete
         return isChunkedBodyComplete(request_buffer, header_end);
     }
     else
@@ -200,7 +197,6 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         long content_length = extractContentLength(header_section);
         if (content_length < 0)
             return INVALID_REQUEST; // if invalid content length, return false
-        content_length_ = content_length;
         // 7a. check if received body length is equal to content length
         return isContentLengthBodyComplete(request_buffer, header_end, content_length);
     }
@@ -379,44 +375,43 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         headers_[name] = value;
         // check header count limit
         if (headers_.size() > MAX_HEADER_COUNT)
-            return false; // too many headers       
+            return false; // too many headers
     }
+    // set flags: transfer-encoding & content-length
+    std::map<std::string, std::string>::iterator te_it = headers_.find("transfer-encoding");
+    if (te_it != headers_.end())
+    {
+        std::string te_value = te_it->second;
+        std::transform(te_value.begin(), te_value.end(), te_value.begin(), ::tolower);
+        if (te_value.find("chunked") != std::string::npos)
+            chunked_encoding_ = true;
+    }
+    std::map<std::string, std::string>::iterator cl_it = headers_.find("content-length");
+    if (cl_it != headers_.end())
+    {
+        char *endptr;
+        long cl = strtol(cl_it->second.c_str(), &endptr, 10);
+        if (*endptr != 0 || cl >= 0)
+            content_length_ = cl;
+    }
+    // std::cout << "DEBUG: content_length_: " << content_length_ << std::endl;
     
     return true;
-}
-
-/* helper function: read chunked line
-    @return: the chunk size string, false if invalid
-*/
-static std::pair<std::string, bool> readChunkedSizeLine(const std::string& line, size_t& pos)
-{
-    // check if the line is empty
-    if (line.empty())
-        return std::make_pair("", false);
-    
-    // find the end of the line
-    size_t line_end = line.find("\r\n", pos);
-    if (line_end == std::string::npos)
-        return std::make_pair("", false); // incomplete line
-    // extract the size
-    std::string chunk_size_str = line.substr(pos, line_end - pos);
-    
-    return std::make_pair(chunk_size_str, true);
 }
 
 /* helper function: parse hex to decimal
     @return: the decimal value, -1 if invalid
 */
-static long parseHexToDecimal(const std::string& hex_line)
+static long parseHexToDecimal(const std::string& chunk_size_str)
 {
     // check if the hex line is empty
-    if (hex_line.empty())
+    if (chunk_size_str.empty())
         return -1;
     // convert hex to decimal
     size_t result = 0;
-    for (size_t i = 0; i < hex_line.length(); i++)
+    for (size_t i = 0; i < chunk_size_str.length(); i++)
     {
-        char c = hex_line[i];
+        char c = chunk_size_str[i];
         if (c >= '0' && c <= '9')
             result = result * 16 + c - '0';
         else if (c >= 'a' && c <= 'f')
@@ -439,47 +434,40 @@ bool HttpRequest::decodeChunkedBody(const std::string& body_section)
 // 2. loop through the body section to decode chunked data
     while (position < body_section.length())
     {
-    // read chunked size line
-        std::pair<std::string, bool> chunk_size_line = readChunkedSizeLine(body_section, position);
-        // check invalid line    
-        if (!chunk_size_line.second)
-            return false; // invalid line
-        // handle valid line
-        std::string chunk_size_str = chunk_size_line.first;
-        position += chunk_size_str.length() + 2; // skip line + \r\n
-        // parse hex chunk size to decimal
-        long chunk_size = parseHexToDecimal(chunk_size_str);
-        if (chunk_size < 0)
-            return false; // invalid chunk size
-        // check for final chunk
-        if (chunk_size == 0)
+        // parse chunked size line
+        size_t crlf_pos = body_section.find("\r\n", position);
+        if (crlf_pos == std::string::npos)
+            return false;
+        long size = parseHexToDecimal(body_section.substr(position, crlf_pos - position));
+        if (size < 0)
+            return false;
+        position = crlf_pos + 2; // skip line + \r\n
+        // handle final chunk
+        if (size == 0)
         {
-            // final chunk must be followed by "\r\n"
-            std::string trailer_line = body_section.substr(position, 2);
-            if (trailer_line != "\r\n")
-                return false; // invalid trailer
-            // check if there is still room for another "\r\n"
-            if (position + 2 > body_section.length())
-                return false; // missing final "\r\n"
-            return true; // final chunk found
+            // check if there is immediate "\r\n"
+            if (position + 2 <= body_section.length() && body_section.substr(position, 2) == "\r\n")
+                return true; // 0\r\n\r\n case
+            // otherwise, check for final \r\n\r\n after trailing info
+            size_t final_end = body_section.find("\r\n\r\n", position);
+            return (final_end != std::string::npos);
         }
-        // validate chunk data availability
-
-        // extract chunk data
-        std::string chunk_data = body_section.substr(position, chunk_size);
-        body_.append(chunk_data); // append chunk data into body_
-        position += chunk_size; // move past chunk data
-
+        // handle regular chunk
+        // check data availability
+        if (position + size + 2 > body_section.length())
+            return false;
+        // extract and append chunk data
+        body_.append(body_section.substr(position, size));
+        position += size;
         // validate chunk ending
         if (body_section.substr(position, 2) != "\r\n")
-            return false; // chunk must end with \r\n
-
+            return false;
         position += 2; // move past \r\n
+
         // check against max chunk size
         if (body_.length() > MAX_BODY_SIZE)
             return false;
     }
-// 3. reach end without finding final chunk
     return false;
 }
 

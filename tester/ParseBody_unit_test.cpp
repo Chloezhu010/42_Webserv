@@ -261,11 +261,7 @@ void testParseBody() {
         try {
             HttpRequest request;
             
-            // Setup: Call isRequestComplete first to set up content_length_ and chunked_encoding_
-            RequestStatus completeness = request.isRequestComplete(test.request_data);
-            std::cout << "DEBUG: Completeness status: " << static_cast<int>(completeness) << std::endl;
-            
-            // Then parse individual components (this is redundant but matches your test structure)
+            // Setup: Parse request components in proper order
             size_t header_end = test.request_data.find("\r\n\r\n");
             if (header_end != std::string::npos) {
                 // Parse request line
@@ -273,7 +269,7 @@ void testParseBody() {
                 std::string request_line = test.request_data.substr(0, first_crlf);
                 request.parseRequestLine(request_line);
                 
-                // Parse headers
+                // Parse headers (this now sets chunked_encoding_ and content_length_)
                 std::string header_section = test.request_data.substr(first_crlf + 2, header_end - first_crlf - 2);
                 request.parseHeaders(header_section);
             }
