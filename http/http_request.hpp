@@ -142,7 +142,7 @@ public:
     // ============================================================================
     
     // request components
-    const std::string& getMethod() const;
+    // const std::string& getMethod() const;
     const std::string& getMethodStr() const;
     const std::string& getURI() const;
     const std::string& getQueryString() const;

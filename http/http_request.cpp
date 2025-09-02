@@ -394,7 +394,10 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         if (*endptr != 0 || cl >= 0)
             content_length_ = cl;
     }
-    // std::cout << "DEBUG: content_length_: " << content_length_ << std::endl;
+    // check if there is host in header
+    std::map<std::string, std::string>::iterator host_it = headers_.find("host");
+    if (host_it == headers_.end())
+        return false; // missing required host header
     
     return true;
 }
@@ -540,11 +543,69 @@ bool HttpRequest::parseBody(const std::string& body_section)
         return false;
 }
 
+/* parse complete request */
+bool HttpRequest::parseRequest(const std::string& complete_request)
+{
+    // pre-validation: check if the request is empty or too large
+    if (complete_request.empty() || complete_request.length() > MAX_REQUEST_SIZE)
+        return false;
+    // check completeness
+    if (isRequestComplete(complete_request) != REQUEST_COMPLETE)
+        return false; // not complete, not ready for parsing
+    
+    // split the request into components
+    size_t first_crlf = complete_request.find("\r\n");
+    size_t header_end = complete_request.find("\r\n\r\n");
+    if (first_crlf == std::string::npos || header_end == std::string::npos)
+        return false;
+
+    // extract components
+    std::string request_line = complete_request.substr(0, first_crlf);
+    std::string header_section;
+    size_t header_start = first_crlf + 2;
+    size_t header_length = header_end - header_start;
+    if (header_length < 0)
+        header_section = "";
+    else
+        header_section = complete_request.substr(header_start, header_length);
+    std::string body_section;
+    size_t body_start = header_end + 4;
+    if (body_start >= complete_request.length())
+        body_section = "";
+    else
+        body_section = complete_request.substr(body_start);
+
+    // parse componenets
+    if (!parseRequestLine(request_line)
+        || !parseHeaders(header_section)
+        || !parseBody(body_section))
+        return false;
+
+    // set completiion flag
+    is_complete_ = true;
+    return true;
+}
 
 
 // ============================================================================
 // Getters                                                  
 // ============================================================================
+
+const std::string& HttpRequest::getMethodStr() const {
+    return method_str_;
+}
+
+const std::string& HttpRequest::getURI() const {
+    return uri_;
+}
+
+const std::string& HttpRequest::getQueryString() const {
+    return query_string_;
+}
+
+const std::string& HttpRequest::getHttpVersion() const {
+    return http_version_;
+}
 
 const std::string& HttpRequest::getBody() const {
     return body_;

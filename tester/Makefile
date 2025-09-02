@@ -1,5 +1,5 @@
 NAME = test
-SRC = ./ParseBody_unit_test.cpp \
+SRC = ./ParseRequest_complete_unit_test.cpp \
 		../http/http_request.cpp
 
 OBJ = $(SRC:.cpp=.o)
