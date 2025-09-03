@@ -19,7 +19,6 @@ enum RequestStatus {
 enum ValidationResult {
     // processing stsate
     NOT_VALIDATED,
-    NEED_MORE_DATA,         // still reading request
     // success responses (2xx)
     VALID_REQUEST,          // 200
     CREATED,                // 201 created (file uploads, POST operations)
@@ -90,6 +89,10 @@ private:
     long content_length_;
     bool chunked_encoding_;
 
+    // connection-related
+    std::string connection_str_;
+    bool keep_alive_;
+
 public:
     // ============================================================================
     // Constructors & Destructors                                                  
@@ -126,6 +129,7 @@ public:
     // parsing help function
     bool decodeChunkedBody(const std::string& body_section);
     bool parseContentLengthBody(const std::string& body_section);
+    std::string getConnectionStr(const std::string& header_section);
 
     // ============================================================================
     // Phase 3 Validation                                                  

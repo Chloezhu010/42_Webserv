@@ -13,9 +13,12 @@ struct HeaderTestCase {
     std::string data;
     bool should_pass;
     std::string description;
+    // connection-related
+    bool expected_keep_alive;
+    std::string expected_connection_str;
     
-    HeaderTestCase(const std::string& n, const std::string& d, bool pass, const std::string& desc)
-        : name(n), data(d), should_pass(pass), description(desc) {}
+    HeaderTestCase(const std::string& n, const std::string& d, bool pass, const std::string& desc, bool keep_alive = true, const std::string& conn_value = "")
+        : name(n), data(d), should_pass(pass), description(desc), expected_keep_alive(keep_alive), expected_connection_str(conn_value) {}
 };
 
 // ============================================================================
@@ -162,6 +165,35 @@ std::vector<HeaderTestCase> createHeaderTestCases() {
         true,
         "Mixed line endings should be handled gracefully"
     ));
+
+    // 8. CONNECTION RELATED
+    test_cases.push_back(HeaderTestCase(
+        "connection-close",
+        "Host: localhost\r\n"
+        "Connection: close\r\n",
+        true,
+        "Normal well-formed headers should pass",
+        false,
+        "Connection closed by the user"
+    ));
+    test_cases.push_back(HeaderTestCase(
+        "connection-keep alive",
+        "Host: localhost\r\n"
+        "Connection: keep-alive\r\n",
+        true,
+        "Normal well-formed headers should pass",
+        true,
+        "Connection keep-alive"
+    ));
+    test_cases.push_back(HeaderTestCase(
+        "connection-misc input",
+        "Host: localhost\r\n"
+        "Connection: @!~laksl_+\r\n",
+        true,
+        "Normal well-formed headers should pass",
+        true,
+        "Connection keep-alive by default"
+    ));
     
     return test_cases;
 }
@@ -170,11 +202,13 @@ std::vector<HeaderTestCase> createHeaderTestCases() {
 // TEST UTILITIES
 // ============================================================================
 
-void printTestResult(const std::string& test_name, bool passed, const std::string& description) {
+void printTestResult(const std::string& test_name, bool passed, const std::string& description, bool keep_alive, const std::string& conn_val) {
     if (passed) {
         std::cout << "✅ PASS: " << test_name << " - " << description << std::endl;
+        std::cout << "   🔗 Connection status: " << keep_alive << "; Connection description: " << conn_val << std::endl;
     } else {
         std::cout << "❌ FAIL: " << test_name << " - " << description << std::endl;
+        std::cout << "   🔗 Connection status: " << keep_alive << "; Connection description: " << conn_val << std::endl;
     }
 }
 
@@ -309,7 +343,7 @@ void testHeaderParsing() {
             passed++;
         }
         
-        printTestResult(test.name, test_passed, test.description);
+        printTestResult(test.name, test_passed, test.description, test.expected_keep_alive, test.expected_connection_str);
         
         // Additional debug info for failures
         if (!test_passed) {

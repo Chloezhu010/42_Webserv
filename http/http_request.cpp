@@ -377,7 +377,7 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         if (headers_.size() > MAX_HEADER_COUNT)
             return false; // too many headers
     }
-    // set flags: transfer-encoding & content-length
+    // set flags: transfer-encoding & content-length & connection
     std::map<std::string, std::string>::iterator te_it = headers_.find("transfer-encoding");
     if (te_it != headers_.end())
     {
@@ -394,10 +394,18 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         if (*endptr != 0 || cl >= 0)
             content_length_ = cl;
     }
-    // check if there is host in header
+    std::map<std::string, std::string>::iterator connection_it = headers_.find("connection:");
+    if (connection_it != headers_.end())
+    {
+        connection_str_ = connection_it->second; // update the connection value str
+        std::transform(connection_str_.begin(), connection_str_.end(), connection_str_.begin(), ::tolower);
+        if (connection_str_.find("close") != std::string::npos)
+            keep_alive_ = false; 
+    }
+    // mandatory host in header
     std::map<std::string, std::string>::iterator host_it = headers_.find("host");
     if (host_it == headers_.end())
-        return false; // missing required host header
+        return false; // missing required host header  
     
     return true;
 }
