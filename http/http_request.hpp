@@ -17,18 +17,44 @@ enum RequestStatus {
 };
 
 enum ValidationResult {
+    // processing stsate
     NOT_VALIDATED,
-    VALID_REQUEST, // 200
-    INVALID_METHOD, // 405
-    INVALID_REQUEST_LINE, // 400
-    INVALID_HTTP_VERSION, // 505
-    INVALID_URI, // 400
-    MISSING_HOST_HEADER, // 400
-    INVALID_CONTENT_LENGTH, // 400
-    CONFLICTING_HEADER, // 400
-    METHOD_BODY_MISMATCH, // 400
-    HEADER_TOO_LARGE, // 431
-    URI_TOO_LONG, // 414
+    NEED_MORE_DATA,         // still reading request
+    // success responses (2xx)
+    VALID_REQUEST,          // 200
+    CREATED,                // 201 created (file uploads, POST operations)
+    NO_CONTENT,             // 204 no content (successful DELETE)
+    // redirection (3xx)
+    MOVED_PERMANENTLY,      // 301 move permanently
+    FOUND,                  // 302 found (temporary redirect)
+    // client error responses (4xx)
+    INVALID_REQUEST_LINE,   // 400 bad request - bad request line
+    INVALID_HTTP_VERSION,   // 400 bad request - bad http version
+    INVALID_URI,            // 400 bad request - bad uri
+    MISSING_HOST_HEADER,    // 400 bad request - missing host header
+    INVALID_CONTENT_LENGTH, // 400 bad request - invalid content-length
+    CONFLICTING_HEADER,     // 400 bad request - conflicting headers
+    METHOD_BODY_MISMATCH,   // 400 bad request - body with GET/DELETE
+    INVALID_HEADERS,        // 400 bad request - header format error
+
+    UNAUTORIZED,            // 401 unauthorized (if auth implemented)
+    FORBIDDEN,              // 403 forbidden - access denied
+    NOT_FOUND,              // 404 not found - resource doesn't exit
+    INVALID_METHOD,         // 405 method not allowed
+    REQUEST_TIMEOUT,        // 408 request timeout
+    CONFLICT,               // 409 conflict - resource conflict
+    LENGTH_REQUIRED,        // 411 length required - POST without content-length
+    PAYLOAD_TOO_LARGE,      // 413 payload too large - body/ request too large
+    URI_TOO_LONG,           // 414 uri too long
+    UNSUPPORTED_MEDIA_TYPE, // 415 unsupported media type
+    HEADER_TOO_LARGE,       // 431 request header fields too large
+    // server error responses (5xx)
+    INTERNAL_SERVER_ERROR,  // 500 internal server error
+    NOT_IMPLEMENTED,        // 501 not implemented
+    BAD_GATEWAY,            // 502 bad gateway - CGI errors
+    SERVICE_UNAVAILABLE,    // 503 Service unavailable - temp overload
+    GATEWAY_TIMEOUT,        // 504 gateway timeout - CGI timeout
+    HTTP_VERSION_NOT_SUPPORTED, // 505 http version not supported    
 };
 
 // constants (TBD)
