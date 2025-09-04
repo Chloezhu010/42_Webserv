@@ -4,7 +4,7 @@
 // Constructors & Destructors                                                  
 // ============================================================================
     
-HttpRequest::HttpRequest(): is_complete_(false), is_valid_(false),
+HttpRequest::HttpRequest(): is_complete_(false), is_parsed_(false),
     validation_error_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false)
 {}
 
@@ -118,7 +118,7 @@ static bool hasChunkedEncoding(const std::string& header_section)
     - return REQUEST_COMPLETE if complete
     - return NEED_MORE_DATA if not complete
 */
-RequestStatus HttpRequest::isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) const {
+RequestStatus HttpRequest::isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) {
     size_t body_start = header_end + 4; // after "\r\n\r\n"
     // extract the body part
     std::string body_part = request_buffer.substr(body_start);
@@ -137,7 +137,7 @@ RequestStatus HttpRequest::isChunkedBodyComplete(const std::string& request_buff
     - return REQUEST_COMPLETE if complete
     - return NEED_MORE_DATA if not complete
 */
-RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length) const
+RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length)
 {
     size_t body_start = header_end + 4; // after "\r\n\r\n"
     size_t received_body_length = request_buffer.length() - body_start;
@@ -159,6 +159,7 @@ RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& reques
         - REQUEST_COMPLETE 1
         - REQUEST_TOO_LARGE 2
         - INVALID_REQUEST 3
+    - set is_complete_ flag if REQUEST_COMPLETE
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) {
     // 1. check if the header is complete
@@ -171,11 +172,13 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     if (method.empty()) {
         return INVALID_REQUEST; // if cannot extract method, return false
     }
-    if (!isValidMethod(method))
-        return INVALID_REQUEST; // if invalid method, return false (not supported)
+    // if (!isValidMethod(method))
+    //     return INVALID_REQUEST; // check in the validation phase later
+
     // 3. check if the method requires a body
     // for GET, DELETE that cannot have body, return true
     if (!methodCanHaveBody(method)) {
+        is_complete_ = true; // set complete flag
         return REQUEST_COMPLETE;
     }
     // 4. for POST that can have body
@@ -189,7 +192,10 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     if (hasChunkedEncoding(header_section))
     {
         // 6a. check if the chunked body is complete
-        return isChunkedBodyComplete(request_buffer, header_end);
+        RequestStatus result = isChunkedBodyComplete(request_buffer, header_end);
+        if (result == REQUEST_COMPLETE)
+            is_complete_ = true; // set complete flag
+        return result;
     }
     else
     {
@@ -198,7 +204,10 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         if (content_length < 0)
             return INVALID_REQUEST; // if invalid content length, return false
         // 7a. check if received body length is equal to content length
-        return isContentLengthBodyComplete(request_buffer, header_end, content_length);
+        RequestStatus result = isContentLengthBodyComplete(request_buffer, header_end, content_length);
+        if (result == REQUEST_COMPLETE)
+            is_complete_ = true; // set complete flag
+        return result;
     }
 }
 
@@ -256,6 +265,8 @@ bool HttpRequest::parseRequestLine(const std::string& request_line)
 
     // extract url and query string
     full_uri_ = parts[1];
+    if (full_uri_.length() > MAX_URI_LENGTH)
+        return false; // uri too long
     size_t query_pos = full_uri_.find('?');
     if (query_pos != std::string::npos) {
         uri_ = full_uri_.substr(0, query_pos);
@@ -589,11 +600,119 @@ bool HttpRequest::parseRequest(const std::string& complete_request)
         || !parseBody(body_section))
         return false;
 
-    // set completiion flag
-    is_complete_ = true;
+    // set successful parsing flag
+    is_parsed_ = true;
     return true;
 }
 
+// ============================================================================
+// Validation                                                  
+// ============================================================================
+
+/* basic input check, prepare for further validation */
+ValidationResult HttpRequest::inputValidation() const
+{
+    // check if request is complete
+    if (!is_complete_)
+        return BAD_REQUEST;
+    // check if request is parsed
+    if (!is_parsed_)
+        return BAD_REQUEST;
+    // check if essential components exist
+    if (method_str_.empty() || uri_.empty() || http_version_.empty())
+        return INVALID_REQUEST_LINE;
+    return VALID_REQUEST; // for further validation
+}
+
+/* validate URI in request line */
+ValidationResult HttpRequest::validateURI() const
+{
+    // basic check: should start with '/'
+    if (uri_[0] != '/')
+        return INVALID_URI;
+    // check for boundary
+    if (uri_.length() > MAX_URI_LENGTH)
+        return URI_TOO_LONG;
+    // path traversal security check
+    if (uri_.find("../") != std::string::npos
+        || uri_.find("..%2f") != std::string::npos
+        || uri_.find("..%2F") != std::string::npos
+        || uri_.find("%2e%2e/") != std::string::npos
+        || uri_.find("%2e%2e%2f") != std::string::npos
+        || uri_.find("%2E%2E/") != std::string::npos
+        || uri_.find("%2E%2E%2F") != std::string::npos
+    )
+        return INVALID_URI;
+    // check for null bytes and control char
+    for (size_t i = 0; i < uri_.length(); i++)
+    {
+        char c = uri_[i];
+        if (c >= 0 && c <= 31) // control characters
+            return INVALID_URI;
+        if (c == 127) // DEL
+            return INVALID_URI;
+    }
+    // validate allowed char
+    for (size_t i = 0; i < uri_.length(); i++)
+    {
+        char c = uri_[i];
+        // RFC 3968 uri char 
+        if (!(isalnum(c) || 
+                c == '-' || c == '_' || c == '.' || c == '~' || // unreserved
+                c == '/' || // path separator
+                c == '%' || // pecent-encoding
+                c == '?' || c == '=' || c == '&' || c == '+')) // query string
+            return INVALID_URI;
+    }
+    // validate percent-encoding format
+    for (size_t i = 0; i < uri_.length(); i++)
+    {
+        if (uri_[i] == '%')
+        {
+            // must have 2 hex digits after %
+            if (i + 2 >= uri_.length())
+                return INVALID_URI;
+            char hex1 = uri_[i + 1];
+            char hex2 = uri_[i + 2];
+            if (!isxdigit(hex1) || !isxdigit(hex2))
+                return INVALID_URI;
+            i += 2; // skip the 2 hex digits
+        }
+    }
+    return VALID_REQUEST;
+}
+
+ValidationResult HttpRequest::validateRequestLine() const
+{
+    // validate method
+    if (!isValidMethod(method_str_))
+        return INVALID_METHOD;
+    // validate URI
+    ValidationResult uri_result = validateURI();
+    if (uri_result != VALID_REQUEST)
+        return uri_result;
+    // validate HTTP version
+    if (http_version_ != "HTTP/1.1")
+        return INVALID_HTTP_VERSION;
+    return VALID_REQUEST;
+}
+
+ValidationResult HttpRequest::validateRequest() const
+{
+    // 1. input validation
+    ValidationResult input_result = inputValidation();
+    if (input_result != VALID_REQUEST)
+        return input_result;
+    // 2. validate request line
+    ValidationResult line_result = validateRequestLine();
+    if (line_result != VALID_REQUEST)
+        return line_result;
+    // 3. validate headers TBU
+
+    // 4. validate body TBU
+
+    return VALID_REQUEST; // if all validations pass
+}
 
 // ============================================================================
 // Getters                                                  
@@ -617,4 +736,14 @@ const std::string& HttpRequest::getHttpVersion() const {
 
 const std::string& HttpRequest::getBody() const {
     return body_;
+}
+
+bool HttpRequest::getIsComplete() const
+{
+    return is_complete_;
+}
+
+bool HttpRequest::getIsParsed() const
+{
+    return is_parsed_;
 }

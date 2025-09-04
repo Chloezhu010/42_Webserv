@@ -257,7 +257,25 @@ Create a complete HTTP server from scratch in C++98 that can:
         - Header generation
             - Required headers: Date, Server, Content-Length
         - Response assembly
-
+- Validation strategy
+    - Pre-validation checks (safety check)
+        - Input: raw request buffer
+        - Check
+            - Buffer size within limits?
+            - Contain null byte or invalid char?
+            - Request complete?
+    - Request line validation
+        - Method validation
+        - URL validation
+        - HTTP version validation
+    - Header validation
+        - Format check
+    - Body validation
+        - Method = GET/ DELETE: should have no body
+        - Method = POST
+            - Chunked body
+            - Content-length body
+            - No body
 - HTTP request parsing
 - HTTP response building
 - HTTP methods

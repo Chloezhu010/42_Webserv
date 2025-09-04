@@ -27,6 +27,7 @@ enum ValidationResult {
     MOVED_PERMANENTLY,      // 301 move permanently
     FOUND,                  // 302 found (temporary redirect)
     // client error responses (4xx)
+    BAD_REQUEST,            // 400 bad request - generic error
     INVALID_REQUEST_LINE,   // 400 bad request - bad request line
     INVALID_HTTP_VERSION,   // 400 bad request - bad http version
     INVALID_URI,            // 400 bad request - bad uri
@@ -53,7 +54,8 @@ enum ValidationResult {
     BAD_GATEWAY,            // 502 bad gateway - CGI errors
     SERVICE_UNAVAILABLE,    // 503 Service unavailable - temp overload
     GATEWAY_TIMEOUT,        // 504 gateway timeout - CGI timeout
-    HTTP_VERSION_NOT_SUPPORTED, // 505 http version not supported    
+
+    // HTTP_VERSION_NOT_SUPPORTED, // 505 http version not supported    
 };
 
 // constants (TBD)
@@ -84,7 +86,7 @@ private:
 
     // metadata
     bool is_complete_;
-    bool is_valid_;
+    bool is_parsed_;
     ValidationResult validation_error_;
     long content_length_;
     bool chunked_encoding_;
@@ -107,8 +109,8 @@ public:
     
     // check request completeness before parsing
     RequestStatus isRequestComplete(const std::string& request_buffer);
-    RequestStatus isChunkedBodyComplete(const std::string& request_buffer, size_t header_end) const;
-    RequestStatus isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length) const;
+    RequestStatus isChunkedBodyComplete(const std::string& request_buffer, size_t header_end);
+    RequestStatus isContentLengthBodyComplete(const std::string& request_buffer, size_t header_end, long content_length);
     
     // data accumulation
     RequestStatus addData(const std::string& new_data);
@@ -136,14 +138,15 @@ public:
     // ============================================================================
     
     // main validation entry point
-    ValidationResult validationRequest() const;
+    ValidationResult validateRequest() const;
 
     // component validation
+    ValidationResult inputValidation() const;
     ValidationResult validateRequestLine() const;
     ValidationResult validateHeader() const;
     ValidationResult validateBody() const;
     ValidationResult validateURI() const;
-    ValidationResult validateHttpVersion() const;
+    // ValidationResult validateHttpVersion() const;
 
     // ============================================================================
     // Extraction methods                                                  
@@ -179,7 +182,9 @@ public:
     const std::string& getHttpVersion() const;
     const std::string& getBody() const;
     
-    // metadata (TBU)
+    // metadata
+   bool getIsComplete() const;
+   bool getIsParsed() const;
 
     // specific headers
     std::string getHost() const;
