@@ -407,7 +407,7 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         else
             content_length_ = cl;
     }
-    std::multimap<std::string, std::string>::iterator connection_it = headers_.find("connection:");
+    std::multimap<std::string, std::string>::iterator connection_it = headers_.find("connection");
     if (connection_it != headers_.end())
     {
         connection_str_ = connection_it->second; // update the connection value str
@@ -767,6 +767,7 @@ ValidationResult HttpRequest::validateHeader() const
     std::string host_value = getHost();
     if (host_value.empty())
         return INVALID_HEADER;
+    // TBU: host value format check
 
 // content-length validation
     // only one content-length header if present
@@ -790,6 +791,12 @@ ValidationResult HttpRequest::validateHeader() const
             return INVALID_HEADER;
     }
 
+// method specific header requirement: TBU
+    // delete shouldn't have certain headers
+
+    // transfer-encoding validation
+
+    
     return VALID_REQUEST;
 }
 
