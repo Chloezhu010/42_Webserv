@@ -285,3 +285,61 @@ Create a complete HTTP server from scratch in C++98 that can:
 - RFC: https://www.rfc-editor.org/
 - CSAPP: https://csapp.cs.cmu.edu/
     - Book: https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf
+
+
+
+
+## Corner cases for header validation
+1. Required Headers
+
+  - [ok] Missing Host header: HTTP/1.1 mandates Host header
+  - [ok] Empty Host value: Host:  (empty after colon)
+  - Multiple Host headers: Should be rejected
+
+  2. Header Format Issues
+
+  - Missing colon: Content-Length 100 (no :)
+  - Empty header name: : value
+  - Header name with spaces: Content Length: 100
+  - Invalid characters in name: Content-Length\x00: 100
+
+  3. Size Limits
+
+  - [ok] Too many headers: > MAX_HEADER_COUNT (100)
+  - [ok] Header line too long: > MAX_HEADER_SIZE (8KB)
+  - [ok] Total headers too large: Sum of all headers > limit
+
+  4. Content-Length Validation
+
+  - Multiple Content-Length: Content-Length: 100\r\nContent-Length: 200
+  - Invalid values: Content-Length: abc, Content-Length: -5
+  - [ok] Conflicting with Transfer-Encoding: Both present simultaneously
+
+  5. Transfer-Encoding Issues
+
+  - Invalid encoding: Transfer-Encoding: gzip (only "chunked" supported)
+  - Multiple encodings: Transfer-Encoding: chunked, gzip
+  - Case variations: transfer-encoding: CHUNKED
+
+  6. Connection Header
+
+  - Invalid values: Connection: maybe (should be "keep-alive" or "close")
+  - Case sensitivity: Connection: Keep-Alive vs keep-alive
+
+  7. Method-Specific Header Requirements
+
+  - [ok] GET/DELETE with Content-Length: Should be 0 or absent
+  - [ok] POST without Content-Length/Transfer-Encoding: Missing body info
+
+  8. Security Issues
+
+  - Header injection: Values containing \r\n
+  - Null bytes: Headers with \x00 characters
+  - Very long values: Potential DoS attacks
+
+  Most Critical to Validate First:
+
+  1. Host header presence (HTTP/1.1 requirement)
+  2. Content-Length/Transfer-Encoding conflicts
+  3. Size limits (DoS prevention)
+  4. Method-body consistency

@@ -697,6 +697,44 @@ ValidationResult HttpRequest::validateRequestLine() const
     return VALID_REQUEST;
 }
 
+static size_t hostCount(const std::map<std::string, std::string>& headers)
+{
+    size_t count = 0;
+    std::map<std::string, std::string>::const_iterator it = headers.find("host");
+    if (it != headers.end())
+        count++;
+    return count;
+}
+
+ValidationResult HttpRequest::validateHeader() const
+{
+// validate host header
+    // host value must be present
+    std::string host_value = getHost();
+    if (host_value.empty())
+        return INVALID_HEADER;
+    // only one host header
+    if (hostCount(headers_) != 1)
+        return INVALID_HEADER;
+
+// content-length validation
+    if (!methodCanHaveBody(method_str_) && content_length_ > 0)
+        return METHOD_BODY_MISMATCH; // GET, DELETE shouldn't have body
+    if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ < 0)
+        return LENGTH_REQUIRED; // POST must have content-length if chunked not set
+
+// transfer-encoding validation
+
+
+    return VALID_REQUEST;
+}
+
+ValidationResult HttpRequest::validateBody() const
+{
+    // TBU
+    return VALID_REQUEST;
+}
+
 ValidationResult HttpRequest::validateRequest() const
 {
     // 1. input validation
@@ -746,4 +784,13 @@ bool HttpRequest::getIsComplete() const
 bool HttpRequest::getIsParsed() const
 {
     return is_parsed_;
+}
+
+// return the host value from the header, empty string if not found
+std::string HttpRequest::getHost() const
+{
+    std::map<std::string, std::string>::const_iterator it = headers_.find("host");
+    if (it != headers_.end())
+        return it->second;
+    return "";
 }

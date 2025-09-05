@@ -31,11 +31,10 @@ enum ValidationResult {
     INVALID_REQUEST_LINE,   // 400 bad request - bad request line
     INVALID_HTTP_VERSION,   // 400 bad request - bad http version
     INVALID_URI,            // 400 bad request - bad uri
-    MISSING_HOST_HEADER,    // 400 bad request - missing host header
+    INVALID_HEADER,         // 400 bad request - missing host value
     INVALID_CONTENT_LENGTH, // 400 bad request - invalid content-length
     CONFLICTING_HEADER,     // 400 bad request - conflicting headers
     METHOD_BODY_MISMATCH,   // 400 bad request - body with GET/DELETE
-    INVALID_HEADERS,        // 400 bad request - header format error
 
     UNAUTORIZED,            // 401 unauthorized (if auth implemented)
     FORBIDDEN,              // 403 forbidden - access denied
@@ -55,12 +54,11 @@ enum ValidationResult {
     SERVICE_UNAVAILABLE,    // 503 Service unavailable - temp overload
     GATEWAY_TIMEOUT,        // 504 gateway timeout - CGI timeout
 
-    // HTTP_VERSION_NOT_SUPPORTED, // 505 http version not supported    
 };
 
 // constants (TBD)
 const size_t MAX_REQUEST_SIZE = 8*1024*1024;
-const size_t MAX_HEADER_SIZE =8*1024;
+const size_t MAX_HEADER_SIZE = 8*1024;
 const size_t MAX_HEADER_COUNT = 100; 
 const size_t MAX_URI_LENGTH = 2048;
 const size_t MAX_BODY_SIZE = 10*1024*1024;
@@ -146,7 +144,6 @@ public:
     ValidationResult validateHeader() const;
     ValidationResult validateBody() const;
     ValidationResult validateURI() const;
-    // ValidationResult validateHttpVersion() const;
 
     // ============================================================================
     // Extraction methods                                                  
