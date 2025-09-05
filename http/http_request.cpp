@@ -328,7 +328,7 @@ static std::vector<std::string> splitIntoLines(const std::string& str)
 /* parse the header section
     - header section format: (header-name ":" OWS header-value OWS CRLF)* 
     - return true if parsed successfully, false otherwise
-    - name-value pairs stored in headers_ map
+    - name-value pairs stored in headers_ multimap
 */
 bool HttpRequest::parseHeaders(const std::string& header_section)
 {
@@ -382,14 +382,14 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
             
         // convert name to lower case for case-insensitive comparison
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-        // store the header in the map
-        headers_[name] = value;
+        // store the header in the multimap
+        headers_.insert(std::make_pair(name, value));
         // check header count limit
         if (headers_.size() > MAX_HEADER_COUNT)
             return false; // too many headers
     }
     // set flags: transfer-encoding & content-length & connection
-    std::map<std::string, std::string>::iterator te_it = headers_.find("transfer-encoding");
+    std::multimap<std::string, std::string>::iterator te_it = headers_.find("transfer-encoding");
     if (te_it != headers_.end())
     {
         std::string te_value = te_it->second;
@@ -397,15 +397,17 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         if (te_value.find("chunked") != std::string::npos)
             chunked_encoding_ = true;
     }
-    std::map<std::string, std::string>::iterator cl_it = headers_.find("content-length");
+    std::multimap<std::string, std::string>::iterator cl_it = headers_.find("content-length");
     if (cl_it != headers_.end())
     {
         char *endptr;
         long cl = strtol(cl_it->second.c_str(), &endptr, 10);
-        if (*endptr != 0 || cl >= 0)
+        if (*endptr != 0 || cl < 0)
+            content_length_ = -1;
+        else
             content_length_ = cl;
     }
-    std::map<std::string, std::string>::iterator connection_it = headers_.find("connection:");
+    std::multimap<std::string, std::string>::iterator connection_it = headers_.find("connection:");
     if (connection_it != headers_.end())
     {
         connection_str_ = connection_it->second; // update the connection value str
@@ -414,7 +416,7 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
             keep_alive_ = false; 
     }
     // mandatory host in header
-    std::map<std::string, std::string>::iterator host_it = headers_.find("host");
+    std::multimap<std::string, std::string>::iterator host_it = headers_.find("host");
     if (host_it == headers_.end())
         return false; // missing required host header  
     
@@ -697,34 +699,96 @@ ValidationResult HttpRequest::validateRequestLine() const
     return VALID_REQUEST;
 }
 
-static size_t hostCount(const std::map<std::string, std::string>& headers)
+/* helper function: count the appearance of header_name in the headers_
+    @return: the count of header_name in headers_
+*/
+static size_t headerCount(const std::multimap<std::string, std::string>& headers, std::string header_name)
 {
     size_t count = 0;
-    std::map<std::string, std::string>::const_iterator it = headers.find("host");
+    std::multimap<std::string, std::string>::const_iterator it = headers.find(header_name);
     if (it != headers.end())
         count++;
     return count;
 }
 
+/* helper function: header name format validation
+    @format: header name can only contain tchar (RFC 7230)
+        tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+        DIGIT = 0-9
+        ALPHA = a-zA-Z
+    @return: true if valid, false otherwise
+*/
+static bool headerNameValid(std::string& name)
+{
+    for (size_t i = 0; i < name.length(); i++)
+    {
+        char c = name[i];
+        // RFC 7230 tchar
+        if (!(isalnum(c) || 
+                c == '!' || c == '#' || c == '$' || c == '%' || 
+                c == '%' || c == '&' || c == '\'' || c == '*' || 
+                c == '+' || c == '-' || c == '.' || c == '^' || 
+                c == '_' || c == '`' || c == '|' || c == '~'))
+            return false;
+    }
+    return true;
+}
+
+/* helper function: header value format validation
+    @format: 
+    allowed
+        - visible ASCII (33-126)
+        - obs-text (128-255) for backward compatibility
+        - spaces, tabs (32, 9) only allowed between visible chars
+    prohibited
+        - control characters (0-31, 127)
+        - no leading or trailing spaces/tabs
+        - no line breaks
+    @return: true if valid, false otherwise
+*/
+static bool headerValueValid(std::string& value)
+{
+    for (size_t i = 0; i < value.length(); i++)
+    {
+        unsigned char c = value[i];
+        if (! (c >= 32 || c == 9 || c >= 128))
+            return false;
+    }
+    return true;
+}
+
 ValidationResult HttpRequest::validateHeader() const
 {
 // validate host header
+    // only one host header is allowed
+    if (headerCount(headers_, "host") != 1)
+        return INVALID_HEADER;
     // host value must be present
     std::string host_value = getHost();
     if (host_value.empty())
         return INVALID_HEADER;
-    // only one host header
-    if (hostCount(headers_) != 1)
-        return INVALID_HEADER;
 
 // content-length validation
+    // only one content-length header if present
+    if (headerCount(headers_, "content-length") > 1)
+        return INVALID_HEADER;
+    // content-length value must be valid if present
     if (!methodCanHaveBody(method_str_) && content_length_ > 0)
         return METHOD_BODY_MISMATCH; // GET, DELETE shouldn't have body
     if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ < 0)
         return LENGTH_REQUIRED; // POST must have content-length if chunked not set
 
-// transfer-encoding validation
-
+// header format issues
+    // header name & value format
+    for (std::multimap<std::string, std::string>::const_iterator it = headers_.begin(); it != headers_.end(); ++it)
+    {
+        std::string name = it->first;
+        if (!headerNameValid(name))
+            return INVALID_HEADER;
+        std::string value = it->second;
+        if (!headerValueValid(value))
+            return INVALID_HEADER;
+    }
 
     return VALID_REQUEST;
 }
@@ -789,7 +853,7 @@ bool HttpRequest::getIsParsed() const
 // return the host value from the header, empty string if not found
 std::string HttpRequest::getHost() const
 {
-    std::map<std::string, std::string>::const_iterator it = headers_.find("host");
+    std::multimap<std::string, std::string>::const_iterator it = headers_.find("host");
     if (it != headers_.end())
         return it->second;
     return "";

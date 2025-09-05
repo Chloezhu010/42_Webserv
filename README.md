@@ -294,14 +294,14 @@ Create a complete HTTP server from scratch in C++98 that can:
 
   - [ok] Missing Host header: HTTP/1.1 mandates Host header
   - [ok] Empty Host value: Host:  (empty after colon)
-  - Multiple Host headers: Should be rejected
+  - [ok] Multiple Host headers: Should be rejected
 
   2. Header Format Issues
 
-  - Missing colon: Content-Length 100 (no :)
-  - Empty header name: : value
-  - Header name with spaces: Content Length: 100
-  - Invalid characters in name: Content-Length\x00: 100
+  - [ok] Missing colon: Content-Length 100 (no :)
+  - [ok] Empty header name: : value
+  - [ok] Header name with spaces: Content Length: 100
+  - [ok] Invalid characters in name: Content-Length\x00: 100
 
   3. Size Limits
 
@@ -311,8 +311,8 @@ Create a complete HTTP server from scratch in C++98 that can:
 
   4. Content-Length Validation
 
-  - Multiple Content-Length: Content-Length: 100\r\nContent-Length: 200
-  - Invalid values: Content-Length: abc, Content-Length: -5
+  - [ok] Multiple Content-Length: Content-Length: 100\r\nContent-Length: 200
+  - [ok] Invalid values: Content-Length: abc, Content-Length: -5
   - [ok] Conflicting with Transfer-Encoding: Both present simultaneously
 
   5. Transfer-Encoding Issues

@@ -35,6 +35,7 @@ enum ValidationResult {
     INVALID_CONTENT_LENGTH, // 400 bad request - invalid content-length
     CONFLICTING_HEADER,     // 400 bad request - conflicting headers
     METHOD_BODY_MISMATCH,   // 400 bad request - body with GET/DELETE
+    MISSING_HOST_HEADER,    // 400 bad request - missing host header
 
     UNAUTORIZED,            // 401 unauthorized (if auth implemented)
     FORBIDDEN,              // 403 forbidden - access denied
@@ -79,7 +80,7 @@ private:
     std::string uri_;
     std::string query_string_;
     std::string http_version_;
-    std::map<std::string, std::string> headers_;
+    std::multimap<std::string, std::string> headers_;
     std::string body_;
 
     // metadata

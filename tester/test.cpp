@@ -38,10 +38,19 @@ bool parseContentLengthBody(const std::string& body_section)
 
 int main()
 {
-    std::string body_section = "  hello_world";
+    // std::string body_section = "  hello_world";
 
-    std::cout << "parsed outcome: " << parseContentLengthBody(body_section) << std::endl;
-    std::cout << "parsed body: " << body_ << std::endl;
+    // std::cout << "parsed outcome: " << parseContentLengthBody(body_section) << std::endl;
+    // std::cout << "parsed body: " << body_ << std::endl;
 
+    std::string test = " 12abc";
+    char *endptr;
+    long cl = strtol(test.c_str(), &endptr, 10);
+    long content_length_ = 0;
+    if (*endptr != 0 || cl < 0)
+        content_length_ = -1;
+    else
+        content_length_ = cl;
+    std::cout << "content_length_: " << content_length_ << std::endl;
     return 0;
 }
