@@ -1,5 +1,5 @@
 NAME = test
-SRC = ./Validation_unit_test.cpp \
+SRC = ./Validation_header_unit_test.cpp \
 		../http/http_request.cpp
 
 OBJ = $(SRC:.cpp=.o)

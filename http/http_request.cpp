@@ -202,7 +202,7 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
         // 7. if not chunked, check content-length
         long content_length = extractContentLength(header_section);
         if (content_length < 0)
-            return INVALID_REQUEST; // if invalid content length, return false
+            return REQUEST_COMPLETE; // if invalid content length, allow complete, validate later
         // 7a. check if received body length is equal to content length
         RequestStatus result = isContentLengthBodyComplete(request_buffer, header_end, content_length);
         if (result == REQUEST_COMPLETE)
@@ -538,8 +538,8 @@ bool HttpRequest::parseBody(const std::string& body_section)
     // for GET & DELETE
     if (!methodCanHaveBody(method_str_))
     {
-        if (chunked_encoding_ || content_length_ >= 0)
-            return false; // GET, DELETE shouldn't have body
+    //     if (chunked_encoding_ || content_length_ >= 0)
+    //         return false; // GET, DELETE shouldn't have body
         body_ = "";
         return true;
     }
@@ -559,9 +559,12 @@ bool HttpRequest::parseBody(const std::string& body_section)
     {
         return parseContentLengthBody(body_section);
     }
-    // POST without content-length
+    // POST without content-length - allow parsing, validate later
     else
-        return false;
+    {
+        body_ = "";
+        return true;
+    }
 }
 
 /* parse complete request */
@@ -704,11 +707,7 @@ ValidationResult HttpRequest::validateRequestLine() const
 */
 static size_t headerCount(const std::multimap<std::string, std::string>& headers, std::string header_name)
 {
-    size_t count = 0;
-    std::multimap<std::string, std::string>::const_iterator it = headers.find(header_name);
-    if (it != headers.end())
-        count++;
-    return count;
+    return headers.count(header_name);
 }
 
 /* helper function: header name format validation
@@ -769,12 +768,26 @@ ValidationResult HttpRequest::validateHeader() const
         return INVALID_HEADER;
     // TBU: host value format check
 
+// transfer-encoding validation
+    // only one transfer-encoding header if present
+    if (headerCount(headers_, "transfer-encoding") > 1)
+        return INVALID_HEADER;
+    // if transfer-encoding is present, must be chunked
+    std::multimap<std::string, std::string>::const_iterator te_it = headers_.find("transfer-encoding");
+    if (te_it != headers_.end())
+    {
+        std::string te_value = te_it->second;
+        std::transform(te_value.begin(), te_value.end(), te_value.begin(), ::tolower);
+        if (te_value.find("chunked") == std::string::npos)
+            return INVALID_HEADER; // only support chunked encoding
+    }
+
 // content-length validation
     // only one content-length header if present
     if (headerCount(headers_, "content-length") > 1)
         return INVALID_HEADER;
     // content-length value must be valid if present
-    if (!methodCanHaveBody(method_str_) && content_length_ > 0)
+    if (!methodCanHaveBody(method_str_) && (content_length_ > 0 || chunked_encoding_))
         return METHOD_BODY_MISMATCH; // GET, DELETE shouldn't have body
     if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ < 0)
         return LENGTH_REQUIRED; // POST must have content-length if chunked not set
@@ -791,12 +804,6 @@ ValidationResult HttpRequest::validateHeader() const
             return INVALID_HEADER;
     }
 
-// method specific header requirement: TBU
-    // delete shouldn't have certain headers
-
-    // transfer-encoding validation
-
-    
     return VALID_REQUEST;
 }
 
