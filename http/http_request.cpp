@@ -809,7 +809,16 @@ ValidationResult HttpRequest::validateHeader() const
 
 ValidationResult HttpRequest::validateBody() const
 {
-    // TBU
+// content-length vs actual body size
+    if (content_length_ >= 0 && body_.length() != static_cast<size_t>(content_length_))
+        return BAD_REQUEST; // content-length mismatch
+    
+/* other checks have been done before
+    - body size limit
+    - method-body mismatch
+    - conflicting headers
+    - chunked encoding validation
+*/ 
     return VALID_REQUEST;
 }
 
@@ -823,9 +832,14 @@ ValidationResult HttpRequest::validateRequest() const
     ValidationResult line_result = validateRequestLine();
     if (line_result != VALID_REQUEST)
         return line_result;
-    // 3. validate headers TBU
-
+    // 3. validate headers
+    ValidationResult header_result = validateHeader();
+    if (header_result != VALID_REQUEST)
+        return header_result;
     // 4. validate body TBU
+    ValidationResult body_result = validateBody();
+    if (body_result != VALID_REQUEST)
+        return body_result;
 
     return VALID_REQUEST; // if all validations pass
 }
