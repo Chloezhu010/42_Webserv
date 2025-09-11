@@ -1,6 +1,7 @@
 NAME = test
-SRC = ./Validation_header_unit_test.cpp \
-		../http/http_request.cpp
+SRC = ./HttpResponse_unit_test.cpp \
+		../http/http_request.cpp \
+		../http/http_response.cpp \
 
 OBJ = $(SRC:.cpp=.o)
 CC = c++
