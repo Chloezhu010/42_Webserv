@@ -19,13 +19,22 @@ public:
     void resultToStatusCode(ValidationResult result);
     std::string getReasonPhase();
     std::string responseStatusLine();
+
     // response header
+    void setHeader(const std::string& name, const std::string& value);
+    void setRequiredHeader(const HttpRequest& request);
+    std::string responseHeader();
 
-    // response body
+    // response body (TBU)
 
+    // build whole response
+    std::string buildFullResponse(const HttpRequest& request);
 
     // getters
     int getStatusCode() const;
+
+    // setters
+    void setBody(std::string body_info);
 
 };
 

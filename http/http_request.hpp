@@ -86,7 +86,7 @@ private:
     // metadata
     bool is_complete_;
     bool is_parsed_;
-    ValidationResult validation_error_;
+    ValidationResult validation_status_;
     long content_length_;
     bool chunked_encoding_;
 
@@ -137,7 +137,7 @@ public:
     // ============================================================================
     
     // main validation entry point
-    ValidationResult validateRequest() const;
+    ValidationResult validateRequest();
 
     // component validation
     ValidationResult inputValidation() const;
@@ -181,18 +181,22 @@ public:
     const std::string& getBody() const;
     
     // metadata
-   bool getIsComplete() const;
-   bool getIsParsed() const;
+    bool getIsComplete() const;
+    bool getIsParsed() const;
 
     // specific headers
     std::string getHost() const;
     std::string getUserAgent() const;
     std::string getContentType() const;
-    std::string getConnection() const;
+    bool getConnection() const;
+    ValidationResult getValidationStatus() const;
 
     // ============================================================================
     // Setters                                            
     // ============================================================================
+
+    void setConnection(bool status);
+    void setValidationResult(ValidationResult result);
 
     // ============================================================================
     // Helpers                                        

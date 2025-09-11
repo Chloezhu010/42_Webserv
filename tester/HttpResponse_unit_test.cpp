@@ -109,8 +109,39 @@ void test_responseStatusLine() {
     std::cout << "✅ All responseStatusLine tests passed!" << std::endl;
 }
 
+void test_responseHeader()
+{
+    HttpRequest request;
+    HttpResponse response;
+    // manuall set connection as keep-alive for testing
+    request.setConnection(true);
+    // manuall set body info for testing
+    response.setBody("<html><body>Hello World</body></html>");
+
+    response.setRequiredHeader(request);
+    std::string header = response.responseHeader();
+    std::cout << "header output: \n" << header << std::endl;
+
+
+}
+
+void test_buildFullResponse()
+{
+    HttpRequest request;
+    HttpResponse response;
+
+    request.setValidationResult(BAD_REQUEST);
+    request.setConnection(false);
+    std::string fullResponse = response.buildFullResponse(request);
+    std::cout << fullResponse << std::endl;
+}
+
+
 int main() {
     test_resultToStatusCode();
     test_responseStatusLine();
+    test_responseHeader();
+    test_buildFullResponse();
+    
     return 0;
 }

@@ -5,7 +5,7 @@
 // ============================================================================
     
 HttpRequest::HttpRequest(): is_complete_(false), is_parsed_(false),
-    validation_error_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false)
+    validation_status_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false)
 {}
 
 HttpRequest::~HttpRequest()
@@ -822,26 +822,39 @@ ValidationResult HttpRequest::validateBody() const
     return VALID_REQUEST;
 }
 
-ValidationResult HttpRequest::validateRequest() const
+ValidationResult HttpRequest::validateRequest()
 {
     // 1. input validation
     ValidationResult input_result = inputValidation();
     if (input_result != VALID_REQUEST)
+    {
+        validation_status_ = input_result;
         return input_result;
+    }
     // 2. validate request line
     ValidationResult line_result = validateRequestLine();
     if (line_result != VALID_REQUEST)
+    {
+        validation_status_ = line_result;
         return line_result;
+    }
     // 3. validate headers
     ValidationResult header_result = validateHeader();
     if (header_result != VALID_REQUEST)
+    {
+        validation_status_ = header_result;
         return header_result;
+    }
     // 4. validate body TBU
     ValidationResult body_result = validateBody();
     if (body_result != VALID_REQUEST)
+    {
+        validation_status_ = body_result;
         return body_result;
-
-    return VALID_REQUEST; // if all validations pass
+    }
+    // if all validations pass
+    validation_status_ = VALID_REQUEST;
+    return VALID_REQUEST;
 }
 
 // ============================================================================
@@ -885,4 +898,30 @@ std::string HttpRequest::getHost() const
     if (it != headers_.end())
         return it->second;
     return "";
+}
+
+// return the connection status
+bool HttpRequest::getConnection() const
+{
+    return keep_alive_;
+}
+
+// return the validation request result
+ValidationResult HttpRequest::getValidationStatus() const
+{
+    return validation_status_;
+}
+
+// ============================================================================
+// Setters
+// ============================================================================
+
+void HttpRequest::setConnection(bool status)
+{
+    keep_alive_ = status;
+}
+
+void HttpRequest::setValidationResult(ValidationResult result)
+{
+    validation_status_ = result;
 }

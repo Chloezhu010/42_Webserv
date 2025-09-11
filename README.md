@@ -276,10 +276,37 @@ Create a complete HTTP server from scratch in C++98 that can:
             - Chunked body
             - Content-length body
             - No body
-- HTTP request parsing
-- HTTP response building
-- HTTP methods
-- HTTP status code
+- HTTP response building process
+```
+HTTP Response Headers Decision Flow:
+
+1. Status Line (REQUIRED)
+   └─ HTTP/1.1 [status_code] [reason_phrase]
+
+2. Core Headers (ALWAYS REQUIRED)
+   ├─ Date: [current_timestamp]
+   ├─ Server: [server_identifier] 
+   └─ Connection: [close|keep-alive]
+
+3. Content Headers (CONDITIONALLY REQUIRED)
+   ├─ Has Body?
+   │  ├─ YES → Content-Length: [byte_count] (REQUIRED)
+   │  ├─ YES → Content-Type: [mime_type] (HIGHLY RECOMMENDED)
+   │  └─ NO → Skip content headers
+   │
+   └─ Method = HEAD?
+      └─ YES → Include Content-Length but no body
+
+4. Status-Specific Headers
+   ├─ 3xx Redirects → Location: [redirect_url] (REQUIRED)
+   ├─ 401 Unauthorized → WWW-Authenticate: [auth_method] (REQUIRED)
+   └─ Other statuses → No additional requirements
+
+5. Caching Headers (RECOMMENDED)
+   ├─ Cache-Control: [cache_directive]
+   ├─ Last-Modified: [file_timestamp]
+   └─ ETag: [entity_tag]
+```
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
@@ -287,59 +314,3 @@ Create a complete HTTP server from scratch in C++98 that can:
     - Book: https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf
 
 
-
-
-## Corner cases for header validation
-1. Required Headers
-
-  - [ok] Missing Host header: HTTP/1.1 mandates Host header
-  - [ok] Empty Host value: Host:  (empty after colon)
-  - [ok] Multiple Host headers: Should be rejected
-
-  2. Header Format Issues
-
-  - [ok] Missing colon: Content-Length 100 (no :)
-  - [ok] Empty header name: : value
-  - [ok] Header name with spaces: Content Length: 100
-  - [ok] Invalid characters in name: Content-Length\x00: 100
-
-  3. Size Limits
-
-  - [ok] Too many headers: > MAX_HEADER_COUNT (100)
-  - [ok] Header line too long: > MAX_HEADER_SIZE (8KB)
-  - [ok] Total headers too large: Sum of all headers > limit
-
-  4. Content-Length Validation
-
-  - [ok] Multiple Content-Length: Content-Length: 100\r\nContent-Length: 200
-  - [ok] Invalid values: Content-Length: abc, Content-Length: -5
-  - [ok] Conflicting with Transfer-Encoding: Both present simultaneously
-
-  5. Transfer-Encoding Issues
-
-  - Invalid encoding: Transfer-Encoding: gzip (only "chunked" supported)
-  - Multiple encodings: Transfer-Encoding: chunked, gzip
-  - Case variations: transfer-encoding: CHUNKED
-
-  6. Connection Header
-
-  - Invalid values: Connection: maybe (should be "keep-alive" or "close")
-  - Case sensitivity: Connection: Keep-Alive vs keep-alive
-
-  7. Method-Specific Header Requirements
-
-  - [ok] GET/DELETE with Content-Length: Should be 0 or absent
-  - [ok] POST without Content-Length/Transfer-Encoding: Missing body info
-
-  8. Security Issues
-
-  - Header injection: Values containing \r\n
-  - Null bytes: Headers with \x00 characters
-  - Very long values: Potential DoS attacks
-
-  Most Critical to Validate First:
-
-  1. Host header presence (HTTP/1.1 requirement)
-  2. Content-Length/Transfer-Encoding conflicts
-  3. Size limits (DoS prevention)
-  4. Method-body consistency

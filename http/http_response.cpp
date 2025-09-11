@@ -95,6 +95,75 @@ std::string HttpResponse::responseStatusLine()
     return (http_version + " " + status_code_str + " " + reason_phase + "\r\n");
 }
 
+// match the respose header name with value
+void HttpResponse::setHeader(const std::string& name, const std::string& value)
+{
+    headers_[name] = value;
+}
+
+// helper function: GMT time info for http response
+static std::string getCurrentDate()
+{
+    time_t now = time(0);
+    struct tm* gmtTime = gmtime(&now);
+    // manual formating for http response
+    char httpbuffer[100];
+    strftime(httpbuffer, sizeof(httpbuffer), "%a, %d %b %Y %H:%M:%S GMT", gmtTime);
+    return (std::string(httpbuffer));
+}
+
+// set the required response header
+void HttpResponse::setRequiredHeader(const HttpRequest& request)
+{
+    setHeader("Date", getCurrentDate());
+    // setHeader("Content-Type", content_type); TBU
+    setHeader("Content-Length", std::to_string(body_.length()));
+    setHeader("Server", "42_webserv");
+    
+    bool keep_alive = request.getConnection();
+    if (keep_alive)
+        setHeader("Connection", "keep-alive");
+    else
+        setHeader("Connection", "close");
+}
+
+/* compose the required header section string in specific order
+    - server
+    - date
+    - content-type: TBU
+    - content-length
+    - connection
+*/
+std::string HttpResponse::responseHeader()
+{
+    std::string header_string;
+    std::string header_order[] = {"Server", "Date", "Content-Type", "Content-Length", "Connection"};
+    int order_size = 5;
+    for (int i = 0; i < order_size; i++)
+    {
+        std::map<std::string, std::string>::const_iterator it = headers_.find(header_order[i]);
+        if (it != headers_.end())
+            header_string += it->first + ": " + it->second + "\r\n";
+    }
+    return header_string;
+}
+
+/* build the whole http response */
+std::string HttpResponse::buildFullResponse(const HttpRequest& request)
+{
+    // update status_code_
+    resultToStatusCode(request.getValidationStatus());
+    // build response status line
+    std::string status_line = responseStatusLine();
+    // build response header section
+    setRequiredHeader(request);
+    std::string header_section = responseHeader();
+    // hardcoded body section TBU
+    setBody("test_test_TBU");
+    return (status_line + header_section + "\r\n" + body_);
+}
+
+
 // ============================================================================
 // Getters                                               
 // ============================================================================  
@@ -102,4 +171,13 @@ std::string HttpResponse::responseStatusLine()
 int HttpResponse::getStatusCode() const
 {
     return status_code_;
+}
+
+// ============================================================================
+// Setters
+// ============================================================================ 
+
+void HttpResponse::setBody(std::string body_info)
+{
+    body_ = body_info;
 }
