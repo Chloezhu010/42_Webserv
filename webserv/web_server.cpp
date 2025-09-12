@@ -227,24 +227,28 @@ void WebServer::processRequest(ClientConnection& client) {
     HttpRequest request;
     HttpResponse response;
     
+    // 尝试解析请求
     if (!request.parseRequest(client.request_buffer)) {
+        // 解析失败 - 返回400
         client.response_buffer = response.buildErrorResponse(400, "Bad Request - Invalid HTTP format");
         std::cout << "❌ Request parsing failed - invalid format" << std::endl;
     } else {
+        // 解析成功，进行验证
         ValidationResult validation_result = request.validateRequest();
         
         if (validation_result != VALID_REQUEST) {
+            // 验证失败 - 返回相应错误
             response.resultToStatusCode(validation_result);
             client.response_buffer = response.buildFullResponse(request);
             std::cout << "❌ Request validation failed: " << validation_result << std::endl;
         } else {
+            // 请求有效，处理文件服务
             std::string uri = request.getURI();
             std::string filename = getFileName(uri);
             
             std::cout << "📂 Requested path: " << uri << std::endl;
             std::cout << "📄 File to serve: " << filename << std::endl;
             
-            // 尝试从文件设置响应体
             response.setBodyFromFile(filename);
             
             if (response.getStatusCode() == 200) {
@@ -253,13 +257,13 @@ void WebServer::processRequest(ClientConnection& client) {
                 std::cout << "❌ File not found, preparing 404 response" << std::endl;
             }
             
-            // ⚠️ 关键：不要调用 resultToStatusCode，保持 setBodyFromFile 设置的状态码
             client.response_buffer = response.buildFullResponse(request);
         }
     }
     
     client.response_ready = true;
     
+    // 修改poll事件为写事件
     for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
         if (it->fd == client.fd) {
             it->events = POLLOUT;
