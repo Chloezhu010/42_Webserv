@@ -6,6 +6,8 @@
 #include <string>
 #include <poll.h>
 #include "../client/client_connection.hpp"
+#include "../http/http_request.hpp"    // 添加这一行
+#include "../http/http_response.hpp"   // 添加这一行
 
 class WebServer {
 private:

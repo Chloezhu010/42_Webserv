@@ -1,6 +1,8 @@
 NAME = server
 SRC = ./main/server.cpp \
 	  ./webserv/web_server.cpp \
+	  ./http/http_response.cpp \
+	  ./http/http_request.cpp \
 	  ./client/client_connection.cpp
 OBJ = $(SRC:.cpp=.o)
 CC = c++

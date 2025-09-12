@@ -224,36 +224,45 @@ void WebServer::processRequest(ClientConnection& client) {
     std::cout << "\n📥 Processing request from fd=" << client.fd << std::endl;
     std::cout << "Request: " << client.request_buffer.substr(0, client.request_buffer.find('\n')) << std::endl;
     
-    // 解析请求路径
-    std::string path = parseHttpPath(client.request_buffer);
-    std::string filename = getFileName(path);
+    HttpRequest request;
+    HttpResponse response;
     
-    std::cout << "📂 Requested path: " << path << std::endl;
-    std::cout << "📄 File to serve: " << filename << std::endl;
-    
-    // 读取文件内容
-    std::string content = readFile(filename);
-    
-    if (!content.empty()) {
-        // 文件存在，返回200
-        client.response_buffer = generateResponse(content, 200);
-        std::cout << "✅ File found, preparing 200 OK response" << std::endl;
+    if (!request.parseRequest(client.request_buffer)) {
+        client.response_buffer = response.buildErrorResponse(400, "Bad Request - Invalid HTTP format");
+        std::cout << "❌ Request parsing failed - invalid format" << std::endl;
     } else {
-        // 文件不存在，返回404
-        std::string error_content = readFile("www/404.html");
-        if (error_content.empty()) {
-            error_content = "<h1>404 Not Found</h1><p>Page not found</p>";
+        ValidationResult validation_result = request.validateRequest();
+        
+        if (validation_result != VALID_REQUEST) {
+            response.resultToStatusCode(validation_result);
+            client.response_buffer = response.buildFullResponse(request);
+            std::cout << "❌ Request validation failed: " << validation_result << std::endl;
+        } else {
+            std::string uri = request.getURI();
+            std::string filename = getFileName(uri);
+            
+            std::cout << "📂 Requested path: " << uri << std::endl;
+            std::cout << "📄 File to serve: " << filename << std::endl;
+            
+            // 尝试从文件设置响应体
+            response.setBodyFromFile(filename);
+            
+            if (response.getStatusCode() == 200) {
+                std::cout << "✅ File found, preparing 200 OK response" << std::endl;
+            } else {
+                std::cout << "❌ File not found, preparing 404 response" << std::endl;
+            }
+            
+            // ⚠️ 关键：不要调用 resultToStatusCode，保持 setBodyFromFile 设置的状态码
+            client.response_buffer = response.buildFullResponse(request);
         }
-        client.response_buffer = generateResponse(error_content, 404);
-        std::cout << "❌ File not found, preparing 404 response" << std::endl;
     }
     
     client.response_ready = true;
     
-    // 修改poll事件：添加写事件监听（C++98兼容版本）
     for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
         if (it->fd == client.fd) {
-            it->events = POLLOUT;  // 现在监听写事件
+            it->events = POLLOUT;
             break;
         }
     }
