@@ -301,8 +301,39 @@ HTTP Response Headers Decision Flow:
    ├─ 3xx Redirects → Location: [redirect_url] (REQUIRED)
    ├─ 401 Unauthorized → WWW-Authenticate: [auth_method] (REQUIRED)
    └─ Other statuses → No additional requirements
-
 ```
+- HTTP response body part decision tree
+```
+HTTP Response Body Decision (GET/POST/DELETE):
+
+METHOD?
+├─ GET
+│  └─ STATUS CODE?
+│     ├─ 200 OK → REQUESTED RESOURCE CONTENT
+│     ├─ 206 Partial Content → PARTIAL RESOURCE CONTENT
+│     ├─ 301/302/307/308 Redirect → OPTIONAL: redirect explanation
+│     ├─ 304 Not Modified → NO BODY
+│     ├─ 4xx Client Error → ERROR PAGE
+│     └─ 5xx Server Error → ERROR PAGE
+│
+├─ POST
+│  └─ STATUS CODE?
+│     ├─ 200 OK → RESPONSE DATA (optional)
+│     ├─ 201 Created → CREATED RESOURCE INFO (optional)
+│     ├─ 202 Accepted → PROCESSING STATUS (optional)
+│     ├─ 204 No Content → NO BODY
+│     ├─ 4xx Client Error → ERROR PAGE
+│     └─ 5xx Server Error → ERROR PAGE
+│
+└─ DELETE
+   └─ STATUS CODE?
+      ├─ 200 OK → DELETION CONFIRMATION (optional)
+      ├─ 202 Accepted → DELETION STATUS (optional)
+      ├─ 204 No Content → NO BODY
+      ├─ 4xx Client Error → ERROR PAGE
+      └─ 5xx Server Error → ERROR PAGE
+```
+
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/

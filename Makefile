@@ -1,4 +1,4 @@
-NAME = server
+NAME = webserv
 SRC = ./main/server.cpp \
 	  ./configparser/configparser.cpp \
 	  ./configparser/initialize.cpp \

@@ -771,11 +771,63 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
 //     sendStaticFile(conn, filePath);
 // }
 
+/* helper function for buildHttpResponse
+    - build the response for GET
+*/
+static void handleGetResponse(ClientConnection* conn, std::string& uri)
+{
+    // map uri to file path
+    std::string file_path = "./www" + uri;
+    if (uri == "/")
+        file_path = "./www/index.html";
+    // use HttpResponse to serve the file
+    conn->response_buffer = conn->http_response->buildFileResponse(file_path);
+}
+
+/* helper function for buildHttpResponse
+    - build the response for POST, should process the data
+*/
+static void handlePostResponse(ClientConnection* conn, std::string& uri)
+{
+    // TBU
+}
+
+/* helper function for buildHttpResponse
+    - build the response for DELETE, should delete resources
+*/
+static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
+{
+    // TBU
+}
+
 /* complete http response generation
     @purpose: generate correspondent http response based on the validated request
 */
 void WebServer::buildHttpResponse(ClientConnection* conn) {
-    
+    // create HttpResponse object if needed
+    if (!conn->http_response)
+        conn->http_response = new HttpResponse();
+    // get validation status from the parsed request
+    ValidationResult val_status = conn->http_request->getValidationStatus();
+
+    // if not VALID_REQUEST
+    if (val_status != VALID_REQUEST)
+    {
+        conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
+    }
+    else // if VALID_REQUEST
+    {
+        // get the method and uri
+        std::string method = conn->http_request->getMethodStr();
+        std::string uri = conn->http_request->getURI();
+
+        if (method == "GET")
+            handleGetResponse(conn, uri);
+        else if (method == "POST")
+            handlePostResponse(conn, uri);
+        else if (method == "DELETE")
+            handleDeleteResponse(conn, uri);
+    }
 }
 
 /* send prepared http response to client over the socket connection */

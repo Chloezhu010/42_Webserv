@@ -6,7 +6,7 @@
 // 构造函数和析构函数
 // ============================================================================
 
-HttpResponse::HttpResponse() : status_code_(200), content_type_("text/html; charset=UTF-8")
+HttpResponse::HttpResponse() : status_code_(0), content_type_("text/html; charset=UTF-8")
 {
 }
 
@@ -302,7 +302,7 @@ void HttpResponse::setBodyFromFile(const std::string& file_path)
     if (!file.is_open())
     {
         setStatusCode(404);
-        setBody(generateErrorPage(404, "文件未找到"));
+        setBody(generateErrorPage(404, "Page not found"));
         content_type_ = "text/html; charset=UTF-8";
         return;
     }
@@ -340,16 +340,16 @@ std::string HttpResponse::generateErrorPage(int status_code, const std::string& 
     
     switch (status_code)
     {
-        case 400: status_text = "错误请求"; error_message = "请求格式不正确"; break;
-        case 403: status_text = "禁止访问"; error_message = "您没有权限访问此资源"; break;
-        case 404: status_text = "页面未找到"; error_message = "抱歉，您请求的页面不存在"; break;
-        case 405: status_text = "方法不允许"; error_message = "此请求方法不被允许"; break;
-        case 500: status_text = "内部服务器错误"; error_message = "服务器遇到内部错误"; break;
-        default: status_text = "错误"; error_message = "发生了未知错误"; break;
+        case 400: status_text = "Bad Request"; error_message = "The request format is incorrect"; break;
+        case 403: status_text = "Forbidden"; error_message = "You don't have permission to access this resource"; break;
+        case 404: status_text = "Page Not Found"; error_message = "Sorry, the page you requested does not exist"; break;
+        case 405: status_text = "Method Not Allowed"; error_message = "This request method is not allowed"; break;
+        case 500: status_text = "Internal Server Error"; error_message = "The server encountered an internal error"; break;
+        default: status_text = "Error"; error_message = "An unknown error occurred"; break;
     }
     
     html << "<!DOCTYPE html>\n"
-         << "<html lang=\"zh-CN\">\n"
+         << "<html lang=\"en\">\n"
          << "<head>\n"
          << "    <meta charset=\"UTF-8\">\n"
          << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
@@ -375,18 +375,18 @@ std::string HttpResponse::generateErrorPage(int status_code, const std::string& 
     if (status_code == 404)
     {
         html << "        <div class=\"error-details\">\n"
-             << "            <p>可能的原因：</p>\n"
+             << "            <p>Possible reasons:</p>\n"
              << "            <ul style=\"text-align: left; color: #666;\">\n"
-             << "                <li>URL地址输入错误</li>\n"
-             << "                <li>页面已被删除或移动</li>\n"
-             << "                <li>服务器配置问题</li>\n"
+             << "                <li>Incorrect URL address</li>\n"
+             << "                <li>Page has been deleted or moved</li>\n"
+             << "                <li>Server configuration issue</li>\n"
              << "            </ul>\n"
              << "        </div>\n";
     }
     
-    html << "        <p><a href=\"/\">返回首页</a></p>\n"
+    html << "        <p><a href=\"/\">Return to Home</a></p>\n"
          << "        <hr>\n"
-         << "        <small>42_webserv/1.0 服务器</small>\n"
+         << "        <small>42_webserv/1.0 Server</small>\n"
          << "    </div>\n"
          << "</body>\n"
          << "</html>";
@@ -401,8 +401,7 @@ std::string HttpResponse::generateErrorPage(int status_code, const std::string& 
 /* 构建完整的HTTP响应 */
 std::string HttpResponse::buildFullResponse(const HttpRequest& request)
 {
-    // ⚠️ 关键修改：只有在状态码还是默认值时才根据验证结果设置
-    if (status_code_ == 200 && request.getValidationStatus() != VALID_REQUEST) {
+    if (status_code_ == 0) {
         resultToStatusCode(request.getValidationStatus());
     }
     
