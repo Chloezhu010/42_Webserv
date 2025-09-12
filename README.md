@@ -302,10 +302,6 @@ HTTP Response Headers Decision Flow:
    ├─ 401 Unauthorized → WWW-Authenticate: [auth_method] (REQUIRED)
    └─ Other statuses → No additional requirements
 
-5. Caching Headers (RECOMMENDED)
-   ├─ Cache-Control: [cache_directive]
-   ├─ Last-Modified: [file_timestamp]
-   └─ ETag: [entity_tag]
 ```
     
 ## Reference sources
