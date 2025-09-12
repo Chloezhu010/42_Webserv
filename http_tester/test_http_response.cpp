@@ -133,7 +133,7 @@ public:
         response.setBodyFromFile("test.html");
         
         bool test1 = (response.getStatusCode() == 200 || response.getStatusCode() == 404);
-        bool test2 = !response.getBody().empty();
+        // bool test2 = !response.getBody().empty();
         printTestResult("文件响应测试", test1);
         
         // 测试不存在的文件
