@@ -162,54 +162,58 @@ RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& reques
     - set is_complete_ flag if REQUEST_COMPLETE
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) {
-    // 1. check if the header is complete
+    // 1. 检查头部是否完整
     size_t header_end = request_buffer.find("\r\n\r\n");
     if (header_end == std::string::npos) {
         return NEED_MORE_DATA;
     }
-    // 2. basic method check
+    
+    // 2. 基本方法检查
     std::string method = extractMethod(request_buffer);
     if (method.empty()) {
-        return INVALID_REQUEST; // if cannot extract method, return false
+        return INVALID_REQUEST;
     }
-    // if (!isValidMethod(method))
-    //     return INVALID_REQUEST; // check in the validation phase later
-
-    // 3. check if the method requires a body
-    // for GET, DELETE that cannot have body, return true
+    
+    // 3. 检查方法是否需要请求体
     if (!methodCanHaveBody(method)) {
-        is_complete_ = true; // set complete flag
+        is_complete_ = true;
         return REQUEST_COMPLETE;
     }
-    // 4. for POST that can have body
-    std::string header_section = request_buffer.substr(0, header_end + 4); // keep "\r\n\r\n"
-    // 5. check for conflicting headers
+    
+    // 4. 对于可以有请求体的POST
+    std::string header_section = request_buffer.substr(0, header_end + 4);
+    
+    // 5. 检查冲突的头部
     bool has_chunked_encoding = hasChunkedEncoding(header_section);
     bool has_content_length = extractContentLength(header_section) >= 0;
+    
     if (has_chunked_encoding && has_content_length)
-        return INVALID_REQUEST; // conflicting headers
-    // 6. if chunked, check if the body is complete
-    if (hasChunkedEncoding(header_section))
-    {
-        // 6a. check if the chunked body is complete
+        return INVALID_REQUEST;
+    
+    // 6. 如果是chunked编码，检查请求体是否完整
+    if (has_chunked_encoding) {
         RequestStatus result = isChunkedBodyComplete(request_buffer, header_end);
         if (result == REQUEST_COMPLETE)
-            is_complete_ = true; // set complete flag
+            is_complete_ = true;
         return result;
     }
-    else
-    {
-        // 7. if not chunked, check content-length
-        long content_length = extractContentLength(header_section);
-        if (content_length < 0)
-            return REQUEST_COMPLETE; // if invalid content length, allow complete, validate later
-        // 7a. check if received body length is equal to content length
-        RequestStatus result = isContentLengthBodyComplete(request_buffer, header_end, content_length);
-        if (result == REQUEST_COMPLETE)
-            is_complete_ = true; // set complete flag
-        return result;
+    
+    // 关键修改：允许没有Content-Length的POST被认为是完整的
+    // 这使得验证阶段能够检测到LENGTH_REQUIRED (411)
+    long content_length = extractContentLength(header_section);
+    if (content_length < 0) {
+        // 对于没有Content-Length的POST，标记为完整以进行验证
+        is_complete_ = true;
+        return REQUEST_COMPLETE;  // 从INVALID_REQUEST改为REQUEST_COMPLETE
     }
+    
+    // 7a. 检查接收的请求体长度是否匹配content length
+    RequestStatus result = isContentLengthBodyComplete(request_buffer, header_end, content_length);
+    if (result == REQUEST_COMPLETE)
+        is_complete_ = true;
+    return result;
 }
+
 
 // ============================================================================
 // Phase 2 Parsing                                                  
@@ -265,8 +269,6 @@ bool HttpRequest::parseRequestLine(const std::string& request_line)
 
     // extract url and query string
     full_uri_ = parts[1];
-    if (full_uri_.length() > MAX_URI_LENGTH)
-        return false; // uri too long
     size_t query_pos = full_uri_.find('?');
     if (query_pos != std::string::npos) {
         uri_ = full_uri_.substr(0, query_pos);
@@ -528,42 +530,33 @@ bool HttpRequest::parseContentLengthBody(const std::string& body_section)
     - return true if parsed successfully, false otherwise
     - body stored in std::string body_
 */
-bool HttpRequest::parseBody(const std::string& body_section)
-{
-// validate header non-conflicting
+bool HttpRequest::parseBody(const std::string& body_section) {
+    // 验证头部不冲突
     if (chunked_encoding_ && content_length_ >= 0)
         return false;
-
-// check if the method can have body
-    // for GET & DELETE
-    if (!methodCanHaveBody(method_str_))
-    {
-    //     if (chunked_encoding_ || content_length_ >= 0)
-    //         return false; // GET, DELETE shouldn't have body
+    
+    // 检查方法是否可以有请求体
+    if (!methodCanHaveBody(method_str_)) {
         body_ = "";
         return true;
     }
-
-// enforce size limit early
-    if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
-        return false; // content exceed max size limit
     
-// for POST: parse body based on type
-    // if transfer-encoding
-    if (chunked_encoding_)
-    {
+    // 提前执行大小限制
+    if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
+        return false;
+    
+    // 对于POST：根据类型解析请求体
+    if (chunked_encoding_) {
         return decodeChunkedBody(body_section);
     }
-    // if content-length
-    else if (content_length_ >= 0)
-    {
+    else if (content_length_ >= 0) {
         return parseContentLengthBody(body_section);
     }
-    // POST without content-length - allow parsing, validate later
-    else
-    {
+    else {
+        // 关键修改：允许没有Content-Length的POST成功解析
+        // 请求体将为空，验证阶段会捕获错误
         body_ = "";
-        return true;
+        return true;  // 从false改为true
     }
 }
 
@@ -633,6 +626,8 @@ ValidationResult HttpRequest::inputValidation() const
 ValidationResult HttpRequest::validateURI() const
 {
     // basic check: should start with '/'
+	if (uri_.length() > MAX_URI_LENGTH)
+        return URI_TOO_LONG;
     if (uri_[0] != '/')
         return INVALID_URI;
     // check for boundary

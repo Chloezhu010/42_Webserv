@@ -573,7 +573,91 @@ void WebServer::handleNewConnection(int serverFd) {
     std::cout << "New connection accepted: fd=" << clientFd << std::endl;
 }
 
+// // original simplified handle client request
+// void WebServer::handleClientRequest(int clientFd) {
+//     ClientConnection* conn = clientConnections[clientFd];
+//     if (!conn) return;
+    
+//     char buffer[4096];
+//     ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
+    
+//     if (bytesRead <= 0) {
+//         if (bytesRead == 0) {
+//             std::cout << "Client disconnected: fd=" << clientFd << std::endl;
+//         } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+//             std::cerr << "recv() failed: " << strerror(errno) << std::endl;
+//         }
+//         closeClientConnection(clientFd);
+//         return;
+//     }
+    
+//     buffer[bytesRead] = '\0';
+//     conn->request_buffer += buffer;
+    
+//     // 检查是否收到完整的HTTP请求
+//     if (conn->request_buffer.find("\r\n\r\n") != std::string::npos) {
+//         conn->request_complete = true;
+        
+//         // 解析并处理请求
+//         if (parseHttpRequest(conn)) {
+//             buildHttpResponse(conn);
+//             conn->response_ready = true;
+//         } else {
+//             // 解析失败，发送400错误
+//             conn->response_buffer = "HTTP/1.1 400 Bad Request\r\n"
+//                                    "Content-Length: 0\r\n"
+//                                    "Connection: close\r\n\r\n";
+//             conn->response_ready = true;
+//         }
+//     }
+// }
+
+
+// // orginal simplified parse request
+// bool WebServer::parseHttpRequest(ClientConnection* conn) {
+//     // 简单的HTTP请求解析
+//     std::istringstream iss(conn->request_buffer);
+//     std::string line;
+    
+//     // 解析请求行
+//     if (!std::getline(iss, line)) return false;
+    
+//     std::istringstream requestLine(line);
+//     std::string method, path, version;
+//     requestLine >> method >> path >> version;
+    
+//     if (method.empty() || path.empty()) return false;
+    
+//     // 存储解析结果（你可以扩展ClientConnection结构体来存储这些信息）
+//     // 这里简单存储在response_buffer中作为临时方案
+//     conn->response_buffer = path; // 临时存储path
+    
+//     std::cout << "Parsed request: " << method << " " << path << " " << version << std::endl;
+//     return true;
+// }
+
+// helpder function: generate 400 bad request string
+static std::string generateErrMsg()
+{
+    std::string error_msg = "HTTP/1.1 400 Bad Request (TBU)\r\n"
+                                   "Content-Length: 0\r\n"
+                                   "Connection: close\r\n\r\n";
+    return error_msg;
+}
+
+/* complete handle client request, integrated with HttpRequest
+    - request reception
+    - check request completeness
+    - if request complete
+        - parse request
+        - prepare for response
+    - if request invalid
+        - prepare error response
+    - if need more data
+        - keep building the buffer
+*/
 void WebServer::handleClientRequest(int clientFd) {
+    /* request reception */
     ClientConnection* conn = clientConnections[clientFd];
     if (!conn) return;
     
@@ -592,25 +676,109 @@ void WebServer::handleClientRequest(int clientFd) {
     
     buffer[bytesRead] = '\0';
     conn->request_buffer += buffer;
-    
-    // 检查是否收到完整的HTTP请求
-    if (conn->request_buffer.find("\r\n\r\n") != std::string::npos) {
+
+    /* check for request completeness & parsing & response */
+    // create HttpRequest object if not exists
+    if (!conn->http_request)
+        conn->http_request = new HttpRequest();
+    // check request completeness
+    RequestStatus status = conn->http_request->isRequestComplete(conn->request_buffer);
+    if (status == REQUEST_COMPLETE) // request is complete
+    {
         conn->request_complete = true;
-        
-        // 解析并处理请求
-        if (parseHttpRequest(conn)) {
+        if (parseHttpRequest(conn)) // parse & validate request successfully
+        {
             buildHttpResponse(conn);
             conn->response_ready = true;
-        } else {
-            // 解析失败，发送400错误
-            conn->response_buffer = "HTTP/1.1 400 Bad Request\r\n"
-                                   "Content-Length: 0\r\n"
-                                   "Connection: close\r\n\r\n";
+        }
+        else // parse & validate request fails
+        {
+            conn->response_buffer = generateErrMsg();
             conn->response_ready = true;
         }
     }
+    // TBU: need to customize the error msg to accomendate request_too_large
+    else if (status == REQUEST_TOO_LARGE)
+    {
+        conn->response_buffer = generateErrMsg();
+        conn->response_ready = true;
+    }
+    else if (status == INVALID_REQUEST)
+    {
+        conn->response_buffer = generateErrMsg();
+        conn->response_ready = true;
+    }
+    // if status == NEED_MORE_DATA, keep building the buffer
 }
 
+
+/* complete parse request, integrated with HttpRequest
+    @purpose: convert raw http request into a structured, validated request object
+    @return: true if request parsed & validated successfully, false otherwise
+*/
+bool WebServer::parseHttpRequest(ClientConnection* conn) {
+
+    /* parse the request */
+    if (!conn->http_request->parseRequest(conn->request_buffer))
+    {
+        std::cerr << "HTTP request parsing failed\n";
+
+        // std::cout << "=== Debug ===:"
+        //         << "\nmethod: " << conn->http_request->getMethodStr()
+        //         << "\nuri: " << conn->http_request->getURI()
+        //         << "\nhttp version: " << conn->http_request->getHttpVersion()
+        //         << "\nquery string: " << conn->http_request->getQueryString()
+        //         << "\nhost: " << conn->http_request->getHost()
+        //         << "\nbody: " << conn->http_request->getBody()
+        //         << "\nis complete: " << conn->http_request->getIsComplete()
+        //         << "\nis parsed: " << conn->http_request->getIsParsed()
+        //         << "\nis connected: " << conn->http_request->getConnection()
+        //         << "\nvalidation status: " << conn->http_request->getValidationStatus()
+        //         << std::endl;
+
+        return false;
+    }
+    /* validate the parsed request */
+    ValidationResult val_status = conn->http_request->validateRequest();
+    if (val_status != VALID_REQUEST)
+    {
+        std::cerr << "HTTP request validation failed: " << val_status << std::endl;
+        return false;
+    }
+
+    std::cout << "Parsed request: "
+                << conn->http_request->getMethodStr() << " "
+                << conn->http_request->getURI() << " "
+                << conn->http_request->getHttpVersion() << " " << std::endl;
+    return true;
+}
+
+// // original simplified http response building
+// void WebServer::buildHttpResponse(ClientConnection* conn) {
+//     // 从临时存储中获取path
+//     std::string path = conn->response_buffer;
+//     conn->response_buffer.clear();
+    
+//     // 处理根路径
+//     if (path == "/") {
+//         path = "/index.html";
+//     }
+    
+//     // 构建完整文件路径（使用第一个服务器的root配置）
+//     std::string filePath = "./www" + path; // 可以改进为根据Host头选择正确的服务器
+    
+//     // 尝试发送文件
+//     sendStaticFile(conn, filePath);
+// }
+
+/* complete http response generation
+    @purpose: generate correspondent http response based on the validated request
+*/
+void WebServer::buildHttpResponse(ClientConnection* conn) {
+    
+}
+
+/* send prepared http response to client over the socket connection */
 void WebServer::handleClientResponse(int clientFd) {
     ClientConnection* conn = clientConnections[clientFd];
     if (!conn || !conn->response_ready) return;
@@ -628,45 +796,6 @@ void WebServer::handleClientResponse(int clientFd) {
         std::cerr << "send() failed: " << strerror(errno) << std::endl;
         closeClientConnection(clientFd);
     }
-}
-
-bool WebServer::parseHttpRequest(ClientConnection* conn) {
-    // 简单的HTTP请求解析
-    std::istringstream iss(conn->request_buffer);
-    std::string line;
-    
-    // 解析请求行
-    if (!std::getline(iss, line)) return false;
-    
-    std::istringstream requestLine(line);
-    std::string method, path, version;
-    requestLine >> method >> path >> version;
-    
-    if (method.empty() || path.empty()) return false;
-    
-    // 存储解析结果（你可以扩展ClientConnection结构体来存储这些信息）
-    // 这里简单存储在response_buffer中作为临时方案
-    conn->response_buffer = path; // 临时存储path
-    
-    std::cout << "Parsed request: " << method << " " << path << " " << version << std::endl;
-    return true;
-}
-
-void WebServer::buildHttpResponse(ClientConnection* conn) {
-    // 从临时存储中获取path
-    std::string path = conn->response_buffer;
-    conn->response_buffer.clear();
-    
-    // 处理根路径
-    if (path == "/") {
-        path = "/index.html";
-    }
-    
-    // 构建完整文件路径（使用第一个服务器的root配置）
-    std::string filePath = "./www" + path; // 可以改进为根据Host头选择正确的服务器
-    
-    // 尝试发送文件
-    sendStaticFile(conn, filePath);
 }
 
 void WebServer::sendStaticFile(ClientConnection* conn, const std::string& filePath) {

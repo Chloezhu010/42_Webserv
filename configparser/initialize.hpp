@@ -4,6 +4,8 @@
 #include "config.hpp"
 #include "configparser.hpp"
 #include "../client/client_connection.hpp"
+#include "../http/http_request.hpp" // handle http request
+#include "../http/http_response.hpp" // handle http response
 #include <vector>
 #include <map>
 #include <sys/socket.h>

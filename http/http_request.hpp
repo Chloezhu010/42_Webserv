@@ -70,9 +70,9 @@ const size_t MAX_BODY_SIZE = 10*1024*1024;
 
 class HttpRequest {
 private:
-    // raw data
-    std::string raw_request_;
-    std::string request_buffer_;
+    // // raw data
+    // std::string raw_request_;
+    // std::string request_buffer_;
 
     // parsed components
     std::string method_str_;
