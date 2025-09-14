@@ -797,7 +797,14 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
 */
 static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
 {
-    // TBU
+    // get request body
+    std::string body = conn->http_request->getBody();
+
+    // route-based processing (TODO: need to update with config file)
+
+
+    // process based on content-type
+
 }
 
 /* complete http response generation

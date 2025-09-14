@@ -333,7 +333,25 @@ METHOD?
       ├─ 4xx Client Error → ERROR PAGE
       └─ 5xx Server Error → ERROR PAGE
 ```
-
+## POST method response building decision tree
+```
+Parse request
+ └── Is path valid? ── No → 404
+         │
+         Yes
+         │
+ └── Is POST allowed? ── No → 405
+         │
+         Yes
+         │
+ └── Is CGI enabled? ── Yes → run CGI, return output
+         │
+         No
+         │
+ └── Is upload/store supported? ── Yes → save, return 201
+         │
+         No → 501 Not Implemented
+```
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
