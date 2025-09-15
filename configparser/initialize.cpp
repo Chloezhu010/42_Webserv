@@ -799,14 +799,36 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
 
-// /* helper function for buildHttpResponse
-//     - build the response for DELETE, should delete resources
-// */
-// static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
-// {
-//     // TBU
-
-// }
+/* helper function for buildHttpResponse
+    - build the response for DELETE, should delete resources
+*/
+static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
+{
+    // TODO: need to update incorporating config file uri 
+    
+    // Map URI to file path
+    std::string file_path = "./www" + uri;
+    if (uri == "/")
+        file_path = "./www/index.html";
+    // if file doesn't exist
+    if (access(file_path.c_str(), F_OK) != 0)
+    {
+        conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found");
+    }
+    // if file exist, try to delete
+    else
+    {
+        // delete successfully
+        if (unlink(file_path.c_str()) == 0)
+        {
+            conn->http_response->setStatusCode(200);
+            conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
+        }
+        // cannot delete
+        else
+            conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden");
+    }
+}
 
 /* complete http response generation
     @purpose: generate correspondent http response based on the validated request
@@ -833,8 +855,8 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
             handleGetResponse(conn, uri);
         else if (method == "POST")
             handlePostResponse(conn, uri);
-        // else if (method == "DELETE")
-        //     handleDeleteResponse(conn, uri);
+        else if (method == "DELETE")
+            handleDeleteResponse(conn, uri);
     }
 }
 

@@ -302,7 +302,7 @@ void HttpResponse::setBodyFromFile(const std::string& file_path)
     if (!file.is_open())
     {
         setStatusCode(404);
-        setBody(generateErrorPage(404, "Page not found"));
+        setBody(generateErrorPage(404, "Not found"));
         content_type_ = "text/html; charset=UTF-8";
         return;
     }
