@@ -789,23 +789,24 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
 */
 static void handlePostResponse(ClientConnection* conn, std::string& uri)
 {
-    // TBU
+    // TODO: need to update incorporating config file uri 
+    (void)uri;
+    // set success state and body for response
+    conn->http_response->setStatusCode(200);
+    conn->http_response->setBody("<h1>POST successful</h1>\r\n\r\n");
+    conn->http_response->setHeader("Content-Type", "text/html");
+    // update the response_buffer
+    conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
 
-/* helper function for buildHttpResponse
-    - build the response for DELETE, should delete resources
-*/
-static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
-{
-    // get request body
-    std::string body = conn->http_request->getBody();
+// /* helper function for buildHttpResponse
+//     - build the response for DELETE, should delete resources
+// */
+// static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
+// {
+//     // TBU
 
-    // route-based processing (TODO: need to update with config file)
-
-
-    // process based on content-type
-
-}
+// }
 
 /* complete http response generation
     @purpose: generate correspondent http response based on the validated request
@@ -832,8 +833,8 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
             handleGetResponse(conn, uri);
         else if (method == "POST")
             handlePostResponse(conn, uri);
-        else if (method == "DELETE")
-            handleDeleteResponse(conn, uri);
+        // else if (method == "DELETE")
+        //     handleDeleteResponse(conn, uri);
     }
 }
 

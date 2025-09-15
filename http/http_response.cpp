@@ -398,7 +398,14 @@ std::string HttpResponse::generateErrorPage(int status_code, const std::string& 
 // 响应构建方法
 // ============================================================================
 
-/* 构建完整的HTTP响应 */
+/* Build complete HTTP response
+ * Purpose: Generate a complete HTTP/1.1 response based on HttpRequest object
+ * Features:
+ * - Automatically set status code from request's ValidationResult
+ * - Generate error pages automatically for error status codes
+ * - Set appropriate response headers based on request (Connection, keep-alive, etc.)
+ * - Generate complete HTTP response string (status line + headers + body)
+ */
 std::string HttpResponse::buildFullResponse(const HttpRequest& request)
 {
     if (status_code_ == 0) {
@@ -421,7 +428,15 @@ std::string HttpResponse::buildFullResponse(const HttpRequest& request)
     return status_line + headers + "\r\n" + body_;
 }
 
-/* 构建错误响应 */
+/* Build error response
+ * Purpose: Quickly generate standalone error responses without HttpRequest context
+ * Features:
+ * - Directly set specified HTTP error status code
+ * - Generate styled HTML error pages with error details
+ * - Set basic response headers (Server, Date, Connection: close)
+ * - Return complete error response string
+ * Use cases: Server internal errors, connection issues when complete request unavailable
+ */
 std::string HttpResponse::buildErrorResponse(int status_code, const std::string& message)
 {
     setStatusCode(status_code);
@@ -440,7 +455,16 @@ std::string HttpResponse::buildErrorResponse(int status_code, const std::string&
     return status_line + headers + "\r\n" + body_;
 }
 
-/* 构建文件响应 */
+/* Build file response
+ * Purpose: Read file content from filesystem and generate HTTP response directly
+ * Features:
+ * - Read specified file path content as response body
+ * - Automatically set Content-Type based on file extension (MIME type detection)
+ * - Generate 404 error response automatically when file doesn't exist
+ * - Set appropriate cache headers (Cache-Control, ETag) for static files
+ * - Return complete file response string
+ * Use cases: Static file serving, file download functionality
+ */
 std::string HttpResponse::buildFileResponse(const std::string& file_path)
 {
     setBodyFromFile(file_path);
