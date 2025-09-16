@@ -5,7 +5,7 @@
 // ============================================================================
     
 HttpRequest::HttpRequest(): is_complete_(false), is_parsed_(false),
-    validation_status_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false)
+    validation_status_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false), keep_alive_(true)
 {}
 
 HttpRequest::~HttpRequest()

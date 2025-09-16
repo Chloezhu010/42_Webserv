@@ -57,6 +57,7 @@ private:
     void handleClientRequest(int clientFd);
     void handleClientResponse(int clientFd);
     void closeClientConnection(int clientFd);
+    void resetConnectionForResue(ClientConnection* conn);
     bool parseHttpRequest(ClientConnection* conn);
     void buildHttpResponse(ClientConnection* conn);
     void sendStaticFile(ClientConnection* conn, const std::string& filePath);

@@ -530,7 +530,15 @@ void WebServer::run() {
             // 检查是否需要关闭连接
             ClientConnection* conn = it->second;
             if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
-                fdsToRemove.push_back(clientFd);
+                // For HTTP/1.1, keep the connection alive by default unless "Connection: close"
+                bool keep_alive = false;
+                if (conn->http_request && conn->http_request->getIsParsed())
+                    keep_alive = conn->http_request->getConnection();
+                // std::cout << "🚧 DEBUG: keep_alive=" << (keep_alive ? "true" : "false") << std::endl;
+                if (!keep_alive)
+                    fdsToRemove.push_back(clientFd);
+                else
+                    resetConnectionForResue(conn); // reset for next request
             }
         }
         
@@ -636,14 +644,6 @@ void WebServer::handleNewConnection(int serverFd) {
 //     return true;
 // }
 
-// helpder function: generate 400 bad request string
-static std::string generateErrMsg()
-{
-    std::string error_msg = "HTTP/1.1 400 Bad Request (TBU)\r\n"
-                                   "Content-Length: 0\r\n"
-                                   "Connection: close\r\n\r\n";
-    return error_msg;
-}
 
 /* complete handle client request, integrated with HttpRequest
     - request reception
@@ -678,9 +678,11 @@ void WebServer::handleClientRequest(int clientFd) {
     conn->request_buffer += buffer;
 
     /* check for request completeness & parsing & response */
-    // create HttpRequest object if not exists
+    // create HttpRequest & HttpResponse object if not exists
     if (!conn->http_request)
         conn->http_request = new HttpRequest();
+    if (!conn->http_response)
+        conn->http_response = new HttpResponse();
     // check request completeness
     RequestStatus status = conn->http_request->isRequestComplete(conn->request_buffer);
     if (status == REQUEST_COMPLETE) // request is complete
@@ -693,19 +695,19 @@ void WebServer::handleClientRequest(int clientFd) {
         }
         else // parse & validate request fails
         {
-            conn->response_buffer = generateErrMsg();
+            conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
             conn->response_ready = true;
         }
     }
     // TBU: need to customize the error msg to accomendate request_too_large
     else if (status == REQUEST_TOO_LARGE)
     {
-        conn->response_buffer = generateErrMsg();
+        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
         conn->response_ready = true;
     }
     else if (status == INVALID_REQUEST)
     {
-        conn->response_buffer = generateErrMsg();
+        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
         conn->response_ready = true;
     }
     // if status == NEED_MORE_DATA, keep building the buffer
@@ -805,7 +807,6 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
 static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
 {
     // TODO: need to update incorporating config file uri 
-    
     // Map URI to file path
     std::string file_path = "./www" + uri;
     if (uri == "/")
@@ -923,6 +924,24 @@ void WebServer::send404Response(ClientConnection* conn) {
     response << content;
     
     conn->response_buffer = response.str();
+}
+
+void WebServer::resetConnectionForResue(ClientConnection* conn) {
+    // reset connection state for next request
+    conn->request_buffer.clear();
+    conn->response_buffer.clear();
+    conn->bytes_sent = 0;
+    conn->request_complete = false;
+    conn->response_ready = false;
+    if (conn->http_request) {
+        delete conn->http_request;
+        conn->http_request = NULL;
+    }
+    if (conn->http_response) {
+        delete conn->http_response;
+        conn->http_response = NULL;
+    }
+    std::cout << "Connection reset for reuse: fd=" << conn->fd << std::endl;
 }
 
 void WebServer::closeClientConnection(int clientFd) {
