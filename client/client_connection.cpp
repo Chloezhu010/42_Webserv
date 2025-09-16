@@ -13,10 +13,10 @@ ClientConnection::~ClientConnection()
 {
     if (http_request) {
         delete http_request;
-        http_request = NULL;
+        // http_request = NULL;
     }
     if (http_response) {
         delete http_response;
-        http_response = NULL;
+        // http_response = NULL;
     }
 }

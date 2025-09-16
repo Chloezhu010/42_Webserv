@@ -444,22 +444,22 @@ std::string WebServer::getLastError() const {
 
 
 void WebServer::run() {
+    // ensure server is running before entering event loop
     if (!running) {
         std::cerr << "Server not running" << std::endl;
         return;
     }
     
     std::cout << "Starting main event loop..." << std::endl;
-    
-    // 初始化maxFd
+    // init maxFd to find the highest fd for select() call
     updateMaxFd();
     
     while (running) {
-        // 清除fd集合
+        // clear previous iteration's fd sets for select()
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
         
-        // 添加所有监听socket到读集合
+        // add all server listening sockets to read set - monitor for new connections
         for (size_t i = 0; i < servers.size(); ++i) {
             const std::vector<int>& socketFds = servers[i]->getSocketFds();
             for (size_t j = 0; j < socketFds.size(); ++j) {
@@ -468,28 +468,30 @@ void WebServer::run() {
             }
         }
         
-        // 添加客户端连接到相应集合
+        /* client connection monitoring */ 
         for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
              it != clientConnections.end(); ++it) {
             int fd = it->first;
             ClientConnection* conn = it->second;
-            
+            // add clients that wait for request data to read set
             if (!conn->request_complete) {
                 FD_SET(fd, &readFds);  // 等待读取请求
             }
+            // add clients that have response ready to write set
             if (conn->response_ready && conn->bytes_sent < conn->response_buffer.size()) {
                 FD_SET(fd, &writeFds); // 等待发送响应
             }
         }
         
-        // 设置超时
+        /* select() call */ 
+        // setup timeout to periodically wake up and check running flag
         struct timeval timeout;
-        timeout.tv_sec = 1;
+        timeout.tv_sec = 1; // 1 second timeout
         timeout.tv_usec = 0;
         
-        // 使用select监控文件描述符
+        // return the number of fds ready for read/write
         int activity = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
-        
+        // error handling
         if (activity < 0) {
             if (errno == EINTR) {
                 continue; // 被信号中断，继续循环
@@ -497,13 +499,14 @@ void WebServer::run() {
             std::cerr << "select() failed: " << strerror(errno) << std::endl;
             break;
         }
-        
+        // timeout handling
         if (activity == 0) {
             // 超时，继续循环
             continue;
         }
         
-        // 检查监听socket是否有新连接
+        /* new connection handling */ 
+        // if the server socket is readable, then accept new connections on all listening sockets
         for (size_t i = 0; i < servers.size(); ++i) {
             const std::vector<int>& socketFds = servers[i]->getSocketFds();
             for (size_t j = 0; j < socketFds.size(); ++j) {
@@ -514,21 +517,27 @@ void WebServer::run() {
             }
         }
         
-        // 检查客户端连接事件
-        std::vector<int> fdsToRemove;
+        /* client request/response handling */
         for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
-             it != clientConnections.end(); ++it) {
+             it != clientConnections.end();) {
             int clientFd = it->first;
+            ClientConnection* conn = it->second;
+
+            // safe iteration: save next iterators before possible deletion
+            std::map<int, ClientConnection*>::iterator next_it = it;
+            ++next_it;
             
+            // if the client fd is readable, handle http request
             if (FD_ISSET(clientFd, &readFds)) {
                 handleClientRequest(clientFd);
             }
+            // if the client fd is writable, handle http response
             if (FD_ISSET(clientFd, &writeFds)) {
                 handleClientResponse(clientFd);
             }
-            
-            // 检查是否需要关闭连接
-            ClientConnection* conn = it->second;
+
+            /* connection lifecycle management */
+            // if the request response is ready, and completely sent, then close or reset the connection
             if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
                 // For HTTP/1.1, keep the connection alive by default unless "Connection: close"
                 bool keep_alive = false;
@@ -536,15 +545,11 @@ void WebServer::run() {
                     keep_alive = conn->http_request->getConnection();
                 // std::cout << "🚧 DEBUG: keep_alive=" << (keep_alive ? "true" : "false") << std::endl;
                 if (!keep_alive)
-                    fdsToRemove.push_back(clientFd);
+                    closeClientConnection(clientFd); // close connection
                 else
                     resetConnectionForResue(conn); // reset for next request
             }
-        }
-        
-        // 关闭已完成的连接
-        for (size_t i = 0; i < fdsToRemove.size(); ++i) {
-            closeClientConnection(fdsToRemove[i]);
+            it = next_it; // move to next iterator
         }
     }
     
@@ -955,24 +960,24 @@ void WebServer::closeClientConnection(int clientFd) {
     std::cout << "Connection closed: fd=" << clientFd << std::endl;
 }
 
+// find the current max fd nb being used by the server and stores it in maxFd
 void WebServer::updateMaxFd() {
+    // reset maxFd
     maxFd = -1;
-    
-    // 检查监听socket
+    // check all listening socket
     for (size_t i = 0; i < servers.size(); ++i) {
         const std::vector<int>& socketFds = servers[i]->getSocketFds();
         for (size_t j = 0; j < socketFds.size(); ++j) {
             if (socketFds[j] > maxFd) {
-                maxFd = socketFds[j];
+                maxFd = socketFds[j]; // update maxFd if higher
             }
         }
     }
-    
-    // 检查客户端连接
+    // check all client connecting sockets
     for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
          it != clientConnections.end(); ++it) {
-        if (it->first > maxFd) {
-            maxFd = it->first;
+        if (it->first > maxFd) { // it->first is the client fd
+            maxFd = it->first; // update maxFd if client fd is higher
         }
     }
 }
