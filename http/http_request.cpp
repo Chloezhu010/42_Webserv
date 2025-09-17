@@ -36,7 +36,7 @@ std::string HttpRequest::extractMethod(const std::string& request_buffer) const
 /* check if the method is valid */
 bool HttpRequest::isValidMethod(const std::string& method) const
 {
-    if (method == "GET" || method == "POST" || method == "DELETE")
+    if (method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD")
         return true;
     return false;
 }
@@ -415,7 +415,9 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         connection_str_ = connection_it->second; // update the connection value str
         std::transform(connection_str_.begin(), connection_str_.end(), connection_str_.begin(), ::tolower);
         if (connection_str_.find("close") != std::string::npos)
-            keep_alive_ = false; 
+            keep_alive_ = false;
+        else
+            keep_alive_ = true;
     }
     // mandatory host in header
     std::multimap<std::string, std::string>::iterator host_it = headers_.find("host");

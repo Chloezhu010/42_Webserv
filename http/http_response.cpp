@@ -27,7 +27,7 @@ void HttpResponse::setStatusCode(int code)
     status_code_ = code;
 }
 
-/* 将ValidationResult枚举转换为HTTP状态码 */
+/* convert ValidationResult into status_code_ */
 void HttpResponse::resultToStatusCode(ValidationResult result)
 {
     switch (result)
@@ -437,7 +437,7 @@ std::string HttpResponse::buildFullResponse(const HttpRequest& request)
  * - Return complete error response string
  * Use cases: Server internal errors, connection issues when complete request unavailable
  */
-std::string HttpResponse::buildErrorResponse(int status_code, const std::string& message)
+std::string HttpResponse::buildErrorResponse(int status_code, const std::string& message, HttpRequest& request)
 {
     setStatusCode(status_code);
     setBody(generateErrorPage(status_code, message));
@@ -446,7 +446,13 @@ std::string HttpResponse::buildErrorResponse(int status_code, const std::string&
     // 在没有请求上下文的情况下构建基本响应头
     setHeader("Server", "42_webserv/1.0");
     setHeader("Date", getCurrentDateGMT());
-    setHeader("Connection", "close");
+
+    bool keep_alive = request.getConnection();
+    if (keep_alive && status_code_ < 400)
+        setHeader("Connection", "keep-alive");
+    else
+        setHeader("Connection", "close");
+    
     setContentHeaders(body_, "");
     
     std::string status_line = buildStatusLine();
@@ -465,7 +471,7 @@ std::string HttpResponse::buildErrorResponse(int status_code, const std::string&
  * - Return complete file response string
  * Use cases: Static file serving, file download functionality
  */
-std::string HttpResponse::buildFileResponse(const std::string& file_path)
+std::string HttpResponse::buildFileResponse(const std::string& file_path, HttpRequest& request)
 {
     setBodyFromFile(file_path);
     
@@ -475,7 +481,12 @@ std::string HttpResponse::buildFileResponse(const std::string& file_path)
     // 在没有请求上下文的情况下构建基本响应头
     setHeader("Server", "42_webserv/1.0");
     setHeader("Date", getCurrentDateGMT());
-    setHeader("Connection", "close");
+
+    bool keep_alive = request.getConnection();
+    if (keep_alive && status_code_ < 400)
+        setHeader("Connection", "keep-alive");
+    else
+        setHeader("Connection", "close");
     
     std::string status_line = buildStatusLine();
     std::string headers = buildHeaders();

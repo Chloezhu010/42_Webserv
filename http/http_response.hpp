@@ -51,8 +51,8 @@ public:
     
     // Response building
     std::string buildFullResponse(const HttpRequest& request);
-    std::string buildErrorResponse(int status_code, const std::string& message = "");
-    std::string buildFileResponse(const std::string& file_path);
+    std::string buildErrorResponse(int status_code, const std::string& message, HttpRequest& request);
+    std::string buildFileResponse(const std::string& file_path, HttpRequest& request);
     
     // Getters
     int getStatusCode() const;

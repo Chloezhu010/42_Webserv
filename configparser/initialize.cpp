@@ -473,6 +473,12 @@ void WebServer::run() {
              it != clientConnections.end(); ++it) {
             int fd = it->first;
             ClientConnection* conn = it->second;
+            // std::cout << "🚧 DEBUG: Processing fd=" << fd << " conn=" << conn << std::endl;
+            // // ====== debug null conn ======
+            // if (!conn) {
+            //     std::cerr << "🚧 DEBUG: Null connection for fd=" << fd << std::endl;
+            //     continue;
+            // }
             // add clients that wait for request data to read set
             if (!conn->request_complete) {
                 FD_SET(fd, &readFds);  // 等待读取请求
@@ -519,9 +525,11 @@ void WebServer::run() {
         
         /* client request/response handling */
         for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
-             it != clientConnections.end();) {
+             it != clientConnections.end();)
+        {
             int clientFd = it->first;
             ClientConnection* conn = it->second;
+            // bool deleted = false;
 
             // safe iteration: save next iterators before possible deletion
             std::map<int, ClientConnection*>::iterator next_it = it;
@@ -543,13 +551,14 @@ void WebServer::run() {
                 bool keep_alive = false;
                 if (conn->http_request && conn->http_request->getIsParsed())
                     keep_alive = conn->http_request->getConnection();
-                // std::cout << "🚧 DEBUG: keep_alive=" << (keep_alive ? "true" : "false") << std::endl;
-                if (!keep_alive)
+                if (!keep_alive) {
                     closeClientConnection(clientFd); // close connection
-                else
+                }
+                else {
                     resetConnectionForResue(conn); // reset for next request
+                }
             }
-            it = next_it; // move to next iterator
+            it = next_it; // move to next client in map
         }
     }
     
@@ -576,7 +585,9 @@ void WebServer::handleNewConnection(int serverFd) {
     
     // 创建客户端连接对象
     ClientConnection* conn = new ClientConnection(clientFd);
+    // std::cout << "🚧 DEBUG: handleNewConnection - created conn=" << conn << " for fd=" << clientFd << std::endl;
     clientConnections[clientFd] = conn;
+    // std::cout << "🚧 DEBUG: handleNewConnection - added to map, size=" << clientConnections.size() << std::endl;
     
     // 更新maxFd
     if (clientFd > maxFd) {
@@ -585,70 +596,6 @@ void WebServer::handleNewConnection(int serverFd) {
     
     std::cout << "New connection accepted: fd=" << clientFd << std::endl;
 }
-
-// // original simplified handle client request
-// void WebServer::handleClientRequest(int clientFd) {
-//     ClientConnection* conn = clientConnections[clientFd];
-//     if (!conn) return;
-    
-//     char buffer[4096];
-//     ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
-    
-//     if (bytesRead <= 0) {
-//         if (bytesRead == 0) {
-//             std::cout << "Client disconnected: fd=" << clientFd << std::endl;
-//         } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
-//             std::cerr << "recv() failed: " << strerror(errno) << std::endl;
-//         }
-//         closeClientConnection(clientFd);
-//         return;
-//     }
-    
-//     buffer[bytesRead] = '\0';
-//     conn->request_buffer += buffer;
-    
-//     // 检查是否收到完整的HTTP请求
-//     if (conn->request_buffer.find("\r\n\r\n") != std::string::npos) {
-//         conn->request_complete = true;
-        
-//         // 解析并处理请求
-//         if (parseHttpRequest(conn)) {
-//             buildHttpResponse(conn);
-//             conn->response_ready = true;
-//         } else {
-//             // 解析失败，发送400错误
-//             conn->response_buffer = "HTTP/1.1 400 Bad Request\r\n"
-//                                    "Content-Length: 0\r\n"
-//                                    "Connection: close\r\n\r\n";
-//             conn->response_ready = true;
-//         }
-//     }
-// }
-
-
-// // orginal simplified parse request
-// bool WebServer::parseHttpRequest(ClientConnection* conn) {
-//     // 简单的HTTP请求解析
-//     std::istringstream iss(conn->request_buffer);
-//     std::string line;
-    
-//     // 解析请求行
-//     if (!std::getline(iss, line)) return false;
-    
-//     std::istringstream requestLine(line);
-//     std::string method, path, version;
-//     requestLine >> method >> path >> version;
-    
-//     if (method.empty() || path.empty()) return false;
-    
-//     // 存储解析结果（你可以扩展ClientConnection结构体来存储这些信息）
-//     // 这里简单存储在response_buffer中作为临时方案
-//     conn->response_buffer = path; // 临时存储path
-    
-//     std::cout << "Parsed request: " << method << " " << path << " " << version << std::endl;
-//     return true;
-// }
-
 
 /* complete handle client request, integrated with HttpRequest
     - request reception
@@ -663,7 +610,10 @@ void WebServer::handleNewConnection(int serverFd) {
 */
 void WebServer::handleClientRequest(int clientFd) {
     /* request reception */
-    ClientConnection* conn = clientConnections[clientFd];
+    // ClientConnection* conn = clientConnections[clientFd]; // cause segfault if clientFd not found
+    std::map<int, ClientConnection*>::iterator it = clientConnections.find(clientFd);
+    if (it == clientConnections.end()) return;
+    ClientConnection* conn = it->second;
     if (!conn) return;
     
     char buffer[4096];
@@ -700,19 +650,19 @@ void WebServer::handleClientRequest(int clientFd) {
         }
         else // parse & validate request fails
         {
-            conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
+            conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
             conn->response_ready = true;
         }
     }
     // TBU: need to customize the error msg to accomendate request_too_large
     else if (status == REQUEST_TOO_LARGE)
     {
-        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
+        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
         conn->response_ready = true;
     }
     else if (status == INVALID_REQUEST)
     {
-        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request");
+        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
         conn->response_ready = true;
     }
     // if status == NEED_MORE_DATA, keep building the buffer
@@ -728,21 +678,6 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
     /* parse the request */
     if (!conn->http_request->parseRequest(conn->request_buffer))
     {
-        std::cerr << "HTTP request parsing failed\n";
-
-        // std::cout << "=== Debug ===:"
-        //         << "\nmethod: " << conn->http_request->getMethodStr()
-        //         << "\nuri: " << conn->http_request->getURI()
-        //         << "\nhttp version: " << conn->http_request->getHttpVersion()
-        //         << "\nquery string: " << conn->http_request->getQueryString()
-        //         << "\nhost: " << conn->http_request->getHost()
-        //         << "\nbody: " << conn->http_request->getBody()
-        //         << "\nis complete: " << conn->http_request->getIsComplete()
-        //         << "\nis parsed: " << conn->http_request->getIsParsed()
-        //         << "\nis connected: " << conn->http_request->getConnection()
-        //         << "\nvalidation status: " << conn->http_request->getValidationStatus()
-        //         << std::endl;
-
         return false;
     }
     /* validate the parsed request */
@@ -760,24 +695,6 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
     return true;
 }
 
-// // original simplified http response building
-// void WebServer::buildHttpResponse(ClientConnection* conn) {
-//     // 从临时存储中获取path
-//     std::string path = conn->response_buffer;
-//     conn->response_buffer.clear();
-    
-//     // 处理根路径
-//     if (path == "/") {
-//         path = "/index.html";
-//     }
-    
-//     // 构建完整文件路径（使用第一个服务器的root配置）
-//     std::string filePath = "./www" + path; // 可以改进为根据Host头选择正确的服务器
-    
-//     // 尝试发送文件
-//     sendStaticFile(conn, filePath);
-// }
-
 /* helper function for buildHttpResponse
     - build the response for GET
 */
@@ -788,7 +705,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
     if (uri == "/")
         file_path = "./www/index.html";
     // use HttpResponse to serve the file
-    conn->response_buffer = conn->http_response->buildFileResponse(file_path);
+    conn->response_buffer = conn->http_response->buildFileResponse(file_path, *conn->http_request);
 }
 
 /* helper function for buildHttpResponse
@@ -819,7 +736,7 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
     // if file doesn't exist
     if (access(file_path.c_str(), F_OK) != 0)
     {
-        conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found");
+        conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
     }
     // if file exist, try to delete
     else
@@ -832,7 +749,7 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
         }
         // cannot delete
         else
-            conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden");
+            conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
     }
 }
 
@@ -868,7 +785,10 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
 
 /* send prepared http response to client over the socket connection */
 void WebServer::handleClientResponse(int clientFd) {
-    ClientConnection* conn = clientConnections[clientFd];
+    // ClientConnection* conn = clientConnections[clientFd]; // cause segfault if clientFd not found
+    std::map<int, ClientConnection*>::iterator it = clientConnections.find(clientFd);
+    if (it == clientConnections.end()) return;
+    ClientConnection* conn = it->second;
     if (!conn || !conn->response_ready) return;
     
     size_t remaining = conn->response_buffer.size() - conn->bytes_sent;
@@ -950,10 +870,18 @@ void WebServer::resetConnectionForResue(ClientConnection* conn) {
 }
 
 void WebServer::closeClientConnection(int clientFd) {
+    // std::cout << "🚧 DEBUG: closeClientConnection called for fd=" << clientFd << std::endl;
+
     std::map<int, ClientConnection*>::iterator it = clientConnections.find(clientFd);
     if (it != clientConnections.end()) {
+        // std::cout << "🚧 DEBUG: Found connection, deleteing..." << std::endl;
         delete it->second;
+        // std::cout << "🚧 DEBUG: Erase the connection from the map..." << std::endl;
         clientConnections.erase(it);
+    }
+    else
+    {
+        // std::cout << "🚧 DEBUG: Connection not found in map!" << std::endl;
     }
     close(clientFd);
     updateMaxFd();
