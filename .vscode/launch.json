@@ -30,6 +30,19 @@
             "program": "${workspaceFolder}/webserv",
             "processId": "${command:pickProcess}",
             "MIMode": "lldb"
+        },
+        {
+            "name": "Debug Large Request Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tester/large_request_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/tester",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "build-large-test"
         }
     ]
 }

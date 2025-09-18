@@ -1,5 +1,5 @@
 NAME = test
-SRC = ./HttpResponse_unit_test.cpp \
+SRC = ./Comprehensive_validation_test.cpp \
 		../http/http_request.cpp \
 		../http/http_response.cpp \
 

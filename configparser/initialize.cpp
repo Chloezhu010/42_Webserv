@@ -650,14 +650,18 @@ void WebServer::handleClientRequest(int clientFd) {
         }
         else // parse & validate request fails
         {
-            conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
+            
+            std::cout << "🚧 request validation status: " << conn->http_request->getValidationStatus() << std::endl;
+            conn->http_response->resultToStatusCode(conn->http_request->getValidationStatus());
+            std::cout << "🚧 response status code: " << conn->http_response->getStatusCode() << std::endl;
+            conn->response_buffer = conn->http_response->buildErrorResponse(conn->http_response->getStatusCode(), "TBU", *conn->http_request);
             conn->response_ready = true;
         }
     }
     // TBU: need to customize the error msg to accomendate request_too_large
     else if (status == REQUEST_TOO_LARGE)
     {
-        conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
+        conn->response_buffer = conn->http_response->buildErrorResponse(413, "TBU", *conn->http_request);
         conn->response_ready = true;
     }
     else if (status == INVALID_REQUEST)

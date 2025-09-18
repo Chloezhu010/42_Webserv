@@ -32,6 +32,7 @@ void HttpResponse::resultToStatusCode(ValidationResult result)
 {
     switch (result)
     {
+        case NOT_VALIDATED: status_code_ = 400; break;
         // 2xx 成功响应
         case VALID_REQUEST: status_code_ = 200; break;
         case CREATED: status_code_ = 201; break;

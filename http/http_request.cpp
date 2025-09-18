@@ -158,7 +158,6 @@ RequestStatus HttpRequest::isContentLengthBodyComplete(const std::string& reques
         - NEED_MORE_DATA 0
         - REQUEST_COMPLETE 1
         - REQUEST_TOO_LARGE 2
-        - INVALID_REQUEST 3
     - set is_complete_ flag if REQUEST_COMPLETE
 */
 RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) {
@@ -211,6 +210,7 @@ RequestStatus HttpRequest::isRequestComplete(const std::string& request_buffer) 
     RequestStatus result = isContentLengthBodyComplete(request_buffer, header_end, content_length);
     if (result == REQUEST_COMPLETE)
         is_complete_ = true;
+
     return result;
 }
 
@@ -349,9 +349,9 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         if (line.empty())
             break;
         
-        // check header size limit
-        if (line.length() > MAX_HEADER_SIZE)
-            return false; // header line too long
+        // // check header size limit
+        // if (line.length() > MAX_HEADER_SIZE)
+        //     return false; // header line too long
         
         // find colon pos
         size_t colon_pos = line.find(':');
@@ -386,9 +386,9 @@ bool HttpRequest::parseHeaders(const std::string& header_section)
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
         // store the header in the multimap
         headers_.insert(std::make_pair(name, value));
-        // check header count limit
-        if (headers_.size() > MAX_HEADER_COUNT)
-            return false; // too many headers
+        // // check header count limit
+        // if (headers_.size() > MAX_HEADER_COUNT)
+        //     return false; // too many headers
     }
     // set flags: transfer-encoding & content-length & connection
     std::multimap<std::string, std::string>::iterator te_it = headers_.find("transfer-encoding");
@@ -492,9 +492,9 @@ bool HttpRequest::decodeChunkedBody(const std::string& body_section)
             return false;
         position += 2; // move past \r\n
 
-        // check against max chunk size
-        if (body_.length() > MAX_BODY_SIZE)
-            return false;
+        // // check against max chunk size
+        // if (body_.length() > MAX_BODY_SIZE)
+        //     return false;
     }
     return false;
 }
@@ -521,9 +521,9 @@ bool HttpRequest::parseContentLengthBody(const std::string& body_section)
     // 5. parse the exact amount of body data
     body_ = body_section.substr(0, content_length_);
 
-    // 6. validate body size limits
-    if (body_.length() > MAX_BODY_SIZE)
-        return false;
+    // // 6. validate body size limits
+    // if (body_.length() > MAX_BODY_SIZE)
+    //     return false;
         
     return true;
 }
@@ -543,9 +543,9 @@ bool HttpRequest::parseBody(const std::string& body_section) {
         return true;
     }
     
-    // 提前执行大小限制
-    if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
-        return false;
+    // // 提前执行大小限制
+    // if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
+    //     return false;
     
     // 对于POST：根据类型解析请求体
     if (chunked_encoding_) {
@@ -566,7 +566,8 @@ bool HttpRequest::parseBody(const std::string& body_section) {
 bool HttpRequest::parseRequest(const std::string& complete_request)
 {
     // pre-validation: check if the request is empty or too large
-    if (complete_request.empty() || complete_request.length() > MAX_REQUEST_SIZE)
+    if (complete_request.empty())
+        // || complete_request.length() > MAX_REQUEST_SIZE)
         return false;
     // check completeness
     if (isRequestComplete(complete_request) != REQUEST_COMPLETE)
@@ -755,6 +756,18 @@ static bool headerValueValid(std::string& value)
 
 ValidationResult HttpRequest::validateHeader() const
 {
+// validate header count and size
+    // check total header number
+    if (headers_.size() > MAX_HEADER_COUNT)
+        return HEADER_TOO_LARGE;
+    // check individual header line size
+    for (std::multimap<std::string, std::string>::const_iterator it = headers_.begin();
+        it != headers_.end(); ++it) {
+            std::string header_line = it->first + ": " + it->second;
+            if (header_line.length() > MAX_HEADER_SIZE)
+                return HEADER_TOO_LARGE;
+        }
+
 // validate host header
     // only one host header is allowed
     if (headerCount(headers_, "host") != 1)
@@ -787,7 +800,10 @@ ValidationResult HttpRequest::validateHeader() const
     if (!methodCanHaveBody(method_str_) && (content_length_ > 0 || chunked_encoding_))
         return METHOD_BODY_MISMATCH; // GET, DELETE shouldn't have body
     if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ < 0)
+        return INVALID_HEADER; // invalid content-length
+    if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ == -1)
         return LENGTH_REQUIRED; // POST must have content-length if chunked not set
+    
 
 // header format issues
     // header name & value format
@@ -806,6 +822,19 @@ ValidationResult HttpRequest::validateHeader() const
 
 ValidationResult HttpRequest::validateBody() const
 {
+// valid payload limit
+    // check body size limit
+    if (body_.length() > MAX_BODY_SIZE)
+        return PAYLOAD_TOO_LARGE;
+    // check total size limit
+    size_t total_size = method_str_.length() + uri_.length()
+                        + http_version_.length() + body_.length();
+    for (std::multimap<std::string, std::string>::const_iterator it = headers_.begin();
+        it != headers_.end(); ++it) {
+            total_size += it->first.length() + it->second.length() + 4; // + ": " + "\r\n"
+        }
+    if (total_size > MAX_REQUEST_SIZE)
+        return PAYLOAD_TOO_LARGE;
 // content-length vs actual body size
     if (content_length_ >= 0 && body_.length() != static_cast<size_t>(content_length_))
         return BAD_REQUEST; // content-length mismatch

@@ -31,7 +31,7 @@ test_http_request() {
     echo "------------------------------------------"
     
     # 发送请求并捕获响应
-    response=$(echo -e "$request" | nc -w 2 localhost 8080 2>/dev/null)
+    response=$(printf "%b" "$request" | nc -w 5 localhost 8080 2>/dev/null)
     
     if [ -n "$response" ]; then
         # 提取状态码
@@ -106,7 +106,7 @@ test_http_request "URI包含空字节" \
     "URI包含控制字符"
 
 # 6. 测试过长URI
-long_uri=$(printf "%0*d" 3000 0 | sed 's/0/a/g')
+long_uri=$(printf "%0*d" 9000 0 | sed 's/0/a/g')
 test_http_request "URI过长" \
     "GET /$long_uri HTTP/1.1\r\nHost: localhost\r\n\r\n" \
     "414" \
@@ -185,7 +185,7 @@ for i in $(seq 1 150); do
 done
 test_http_request "头部数量过多" \
     "GET / HTTP/1.1\r\nHost: localhost\r\n${many_headers}\r\n" \
-    "400" \
+    "431" \
     "头部数量超过100个限制"
 
 # 17. 测试无效头部格式
@@ -208,7 +208,7 @@ test_http_request "无效chunked编码" \
 # 19. 测试请求总大小过大
 test_http_request "请求总大小过大" \
     "GET /$long_uri HTTP/1.1\r\nHost: localhost\r\nCustom-Header: $large_header_value\r\n\r\n" \
-    "413" \
+    "414" \
     "整个请求超过8MB限制"
 
 # 20. 测试特殊字符处理

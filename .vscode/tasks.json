@@ -42,6 +42,28 @@
             "args": ["release"],
             "group": "build",
             "detail": "Build optimized release version"
+        },
+        {
+            "label": "build-large-test",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-I..",
+                "-std=c++98",
+                "-g",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "LargeRequest_unit_test.cpp",
+                "../http/http_request.cpp",
+                "-o",
+                "large_request_test"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tester"
+            },
+            "group": "build",
+            "detail": "Build large request unit test with debug symbols"
         }
     ]
 }
