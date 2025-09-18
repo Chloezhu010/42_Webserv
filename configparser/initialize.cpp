@@ -473,12 +473,6 @@ void WebServer::run() {
              it != clientConnections.end(); ++it) {
             int fd = it->first;
             ClientConnection* conn = it->second;
-            // std::cout << "🚧 DEBUG: Processing fd=" << fd << " conn=" << conn << std::endl;
-            // // ====== debug null conn ======
-            // if (!conn) {
-            //     std::cerr << "🚧 DEBUG: Null connection for fd=" << fd << std::endl;
-            //     continue;
-            // }
             // add clients that wait for request data to read set
             if (!conn->request_complete) {
                 FD_SET(fd, &readFds);  // 等待读取请求
