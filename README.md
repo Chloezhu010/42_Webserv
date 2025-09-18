@@ -262,24 +262,105 @@ Create a complete HTTP server from scratch in C++98 that can:
         - Header generation
             - Required headers: Date, Server, Content-Length
         - Response assembly
+- Validation strategy
+    - Pre-validation checks (safety check)
+        - Input: raw request buffer
+        - Check
+            - Buffer size within limits?
+            - Contain null byte or invalid char?
+            - Request complete?
+    - Request line validation
+        - Method validation
+        - URL validation
+        - HTTP version validation
+    - Header validation
+        - Format check
+    - Body validation
+        - Method = GET/ DELETE: should have no body
+        - Method = POST
+            - Chunked body
+            - Content-length body
+            - No body
+- HTTP response building process
+```
+HTTP Response Headers Decision Flow:
 
-- HTTP request parsing
-- HTTP response building
-- HTTP methods
-- HTTP status code
-    - 200: successful response
-    - 204: no content
-    - 301: permanent redirect
-    - 302: temporary redirect
-    - 400: bad request
-    - 403: forbidden
-    - 404: tot found
-    - 405: method not allowed
-    - 413: content too large
-    - 418: i'm a teapot
-    - 500: internal server error
+1. Status Line (REQUIRED)
+   └─ HTTP/1.1 [status_code] [reason_phrase]
+
+2. Core Headers (ALWAYS REQUIRED)
+   ├─ Date: [current_timestamp]
+   ├─ Server: [server_identifier] 
+   └─ Connection: [close|keep-alive]
+
+3. Content Headers (CONDITIONALLY REQUIRED)
+   ├─ Has Body?
+   │  ├─ YES → Content-Length: [byte_count] (REQUIRED)
+   │  ├─ YES → Content-Type: [mime_type] (HIGHLY RECOMMENDED)
+   │  └─ NO → Skip content headers
+   │
+   └─ Method = HEAD?
+      └─ YES → Include Content-Length but no body
+
+4. Status-Specific Headers
+   ├─ 3xx Redirects → Location: [redirect_url] (REQUIRED)
+   ├─ 401 Unauthorized → WWW-Authenticate: [auth_method] (REQUIRED)
+   └─ Other statuses → No additional requirements
+```
+- HTTP response body part decision tree
+```
+HTTP Response Body Decision (GET/POST/DELETE):
+
+METHOD?
+├─ GET
+│  └─ STATUS CODE?
+│     ├─ 200 OK → REQUESTED RESOURCE CONTENT
+│     ├─ 206 Partial Content → PARTIAL RESOURCE CONTENT
+│     ├─ 301/302/307/308 Redirect → OPTIONAL: redirect explanation
+│     ├─ 304 Not Modified → NO BODY
+│     ├─ 4xx Client Error → ERROR PAGE
+│     └─ 5xx Server Error → ERROR PAGE
+│
+├─ POST
+│  └─ STATUS CODE?
+│     ├─ 200 OK → RESPONSE DATA (optional)
+│     ├─ 201 Created → CREATED RESOURCE INFO (optional)
+│     ├─ 202 Accepted → PROCESSING STATUS (optional)
+│     ├─ 204 No Content → NO BODY
+│     ├─ 4xx Client Error → ERROR PAGE
+│     └─ 5xx Server Error → ERROR PAGE
+│
+└─ DELETE
+   └─ STATUS CODE?
+      ├─ 200 OK → DELETION CONFIRMATION (optional)
+      ├─ 202 Accepted → DELETION STATUS (optional)
+      ├─ 204 No Content → NO BODY
+      ├─ 4xx Client Error → ERROR PAGE
+      └─ 5xx Server Error → ERROR PAGE
+```
+## POST method response building decision tree
+```
+Parse request
+ └── Is path valid? ── No → 404
+         │
+         Yes
+         │
+ └── Is POST allowed? ── No → 405
+         │
+         Yes
+         │
+ └── Is CGI enabled? ── Yes → run CGI, return output
+         │
+         No
+         │
+ └── Is upload/store supported? ── Yes → save, return 201
+         │
+         No → 501 Not Implemented
+```
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
 - CSAPP: https://csapp.cs.cmu.edu/
     - Book: https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf
+
+

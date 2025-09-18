@@ -1,0 +1,48 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug webserv",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/webserv",
+            "args": ["nginx1.conf"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "Debug webserv (Simple)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/webserv",
+            "args": ["nginx1.conf"],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "Attach to webserv",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/webserv",
+            "processId": "${command:pickProcess}",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "Debug Large Request Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tester/large_request_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/tester",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "build-large-test"
+        }
+    ]
+}

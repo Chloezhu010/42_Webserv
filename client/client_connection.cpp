@@ -1,9 +1,22 @@
-#include "client_connection.h"
+#include "client_connection.hpp"
 
-// 默认构造函数
+// default constructor
 ClientConnection::ClientConnection() 
-    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false) {}
+    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false), http_request(NULL), http_response(NULL) {}
 
-// 带参数构造函数
+// constructor with param
 ClientConnection::ClientConnection(int socket_fd) 
-    : fd(socket_fd), bytes_sent(0), request_complete(false), response_ready(false) {}
+    : fd(socket_fd), bytes_sent(0), request_complete(false), response_ready(false), http_request(NULL), http_response(NULL) {}
+
+// default destructor
+ClientConnection::~ClientConnection()
+{
+    if (http_request) {
+        delete http_request;
+        // http_request = NULL;
+    }
+    if (http_response) {
+        delete http_response;
+        // http_response = NULL;
+    }
+}
