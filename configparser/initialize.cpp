@@ -554,6 +554,32 @@ void WebServer::run() {
             }
             it = next_it; // move to next client in map
         }
+
+        /* handle connection connection
+            - auto close the connection when idle +10 seconds
+        */
+        time_t current_time = time(NULL);
+        // std::cout << "🚧 DEBUG: check current time: " << current_time << std::endl;
+        for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
+            it != clientConnections.end();) 
+            {
+                ClientConnection* conn = it->second;
+                time_t elapse = current_time - conn->last_active;
+                std::cout << "🚧 DEBUG: fd=" << it->first
+                            << ", current_time: " << current_time
+                            << ", last_active: " << conn->last_active
+                            << ", elapse time: " << elapse << std::endl;
+                // 10 seconds timeout
+                if (elapse > 10)
+                {
+                    int fd = it->first;
+                    std::cout << "Connection timed out: fd=" << fd << std::endl;
+                    closeClientConnection(fd);
+                    ++it; // move to next client
+                }
+                else
+                    ++it;
+            }
     }
     
     std::cout << "Event loop ended." << std::endl;
@@ -579,9 +605,9 @@ void WebServer::handleNewConnection(int serverFd) {
     
     // 创建客户端连接对象
     ClientConnection* conn = new ClientConnection(clientFd);
-    // std::cout << "🚧 DEBUG: handleNewConnection - created conn=" << conn << " for fd=" << clientFd << std::endl;
+    conn->last_active = time(NULL); // init last active time
+    // std::cout << "🚧 DEBUG: initial last_active time: " << conn->last_active << std::endl;
     clientConnections[clientFd] = conn;
-    // std::cout << "🚧 DEBUG: handleNewConnection - added to map, size=" << clientConnections.size() << std::endl;
     
     // 更新maxFd
     if (clientFd > maxFd) {
@@ -621,10 +647,12 @@ void WebServer::handleClientRequest(int clientFd) {
         }
         closeClientConnection(clientFd);
         return;
+    } else {
+        buffer[bytesRead] = '\0';
+        std::cout << "DEBUG: received " << bytesRead << " bytes: [" << buffer << "]" << std::endl;
+        conn->request_buffer += buffer;
+        conn->last_active = time(NULL); // update last active time
     }
-    
-    buffer[bytesRead] = '\0';
-    conn->request_buffer += buffer;
 
     /* check for request completeness & parsing & response */
     // create HttpRequest & HttpResponse object if not exists
@@ -645,9 +673,9 @@ void WebServer::handleClientRequest(int clientFd) {
         else // parse & validate request fails
         {
             
-            std::cout << "🚧 request validation status: " << conn->http_request->getValidationStatus() << std::endl;
+            // std::cout << "🚧 request validation status: " << conn->http_request->getValidationStatus() << std::endl;
             conn->http_response->resultToStatusCode(conn->http_request->getValidationStatus());
-            std::cout << "🚧 response status code: " << conn->http_response->getStatusCode() << std::endl;
+            // std::cout << "🚧 response status code: " << conn->http_response->getStatusCode() << std::endl;
             conn->response_buffer = conn->http_response->buildErrorResponse(conn->http_response->getStatusCode(), "TBU", *conn->http_request);
             conn->response_ready = true;
         }

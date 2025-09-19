@@ -2,6 +2,7 @@
 #define CLIENT_CONNECTION_HPP
 
 #include <string>
+#include <ctime>
 #include "../http/http_request.hpp" // handle http request
 #include "../http/http_response.hpp" // handle http response
 
@@ -13,6 +14,7 @@ struct ClientConnection {
     size_t bytes_sent;          // 已发送的字节数
     bool request_complete;      // 请求是否接收完整
     bool response_ready;        // 响应是否准备好
+    time_t last_active;       // to deal with timeout
 
     // handle http request & response
     HttpRequest* http_request; // request parsing & validation
