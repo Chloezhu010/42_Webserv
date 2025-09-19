@@ -5,7 +5,7 @@
 // ============================================================================
     
 HttpRequest::HttpRequest(): is_complete_(false), is_parsed_(false),
-    validation_status_(NOT_VALIDATED), content_length_(-1), chunked_encoding_(false), keep_alive_(true)
+    validation_status_(NOT_VALIDATED), content_length_(-999), chunked_encoding_(false), keep_alive_(true)
 {}
 
 HttpRequest::~HttpRequest()
@@ -70,7 +70,6 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
     if (colon_pos == std::string::npos || line_end == std::string::npos)
         return -1; // invalid format
     std::string length_str = lower_header.substr(colon_pos + 1, line_end - colon_pos - 1);
-
     // cleanup the value (remove spaces, \t, \r, \n)
     size_t start = length_str.find_first_not_of(" \t\r\n");
     size_t end = length_str.find_last_not_of(" \t\r\n");
@@ -799,10 +798,10 @@ ValidationResult HttpRequest::validateHeader() const
     // content-length value must be valid if present
     if (!methodCanHaveBody(method_str_) && (content_length_ > 0 || chunked_encoding_))
         return METHOD_BODY_MISMATCH; // GET, DELETE shouldn't have body
+    if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ == -999)
+        return LENGTH_REQUIRED; // POST must have content-length if chunked not set
     if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ < 0)
         return INVALID_HEADER; // invalid content-length
-    if (methodCanHaveBody(method_str_) && !chunked_encoding_ && content_length_ == -1)
-        return LENGTH_REQUIRED; // POST must have content-length if chunked not set
     
 
 // header format issues
