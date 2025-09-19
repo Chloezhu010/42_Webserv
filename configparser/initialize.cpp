@@ -501,8 +501,8 @@ void WebServer::run() {
         }
         // timeout handling
         if (activity == 0) {
-            // 超时，继续循环
-            continue;
+            // timetout occurred, fall through to connection cleanup
+            // continue;
         }
         
         /* new connection handling */ 
@@ -555,27 +555,28 @@ void WebServer::run() {
             it = next_it; // move to next client in map
         }
 
-        /* handle connection connection
+        /* handle connection timeout
             - auto close the connection when idle +10 seconds
         */
         time_t current_time = time(NULL);
-        // std::cout << "🚧 DEBUG: check current time: " << current_time << std::endl;
         for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
             it != clientConnections.end();) 
             {
                 ClientConnection* conn = it->second;
                 time_t elapse = current_time - conn->last_active;
-                std::cout << "🚧 DEBUG: fd=" << it->first
-                            << ", current_time: " << current_time
-                            << ", last_active: " << conn->last_active
-                            << ", elapse time: " << elapse << std::endl;
+                // std::cout << "🚧 DEBUG: fd=" << it->first
+                //             << ", current_time: " << current_time
+                //             << ", last_active: " << conn->last_active
+                //             << ", elapse time: " << elapse << std::endl;
                 // 10 seconds timeout
                 if (elapse > 10)
                 {
                     int fd = it->first;
                     std::cout << "Connection timed out: fd=" << fd << std::endl;
+                    std::map<int, ClientConnection*>::iterator next_it = it;
+                    ++next_it;
                     closeClientConnection(fd);
-                    ++it; // move to next client
+                    it = next_it; // move to next client in map
                 }
                 else
                     ++it;
@@ -649,7 +650,7 @@ void WebServer::handleClientRequest(int clientFd) {
         return;
     } else {
         buffer[bytesRead] = '\0';
-        std::cout << "DEBUG: received " << bytesRead << " bytes: [" << buffer << "]" << std::endl;
+        // std::cout << "🚧 DEBUG: received " << bytesRead << " bytes: [" << buffer << "]" << std::endl;
         conn->request_buffer += buffer;
         conn->last_active = time(NULL); // update last active time
     }

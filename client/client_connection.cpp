@@ -2,7 +2,7 @@
 
 // default constructor
 ClientConnection::ClientConnection() 
-    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false), last_active(time(NULL)), http_response(NULL) {}
+    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false), last_active(time(NULL)), http_request(NULL), http_response(NULL) {}
 
 // constructor with param
 ClientConnection::ClientConnection(int socket_fd) 
