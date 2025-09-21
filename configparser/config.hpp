@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stdexcept>
 
 // Location配置结构体
 struct LocationConfig {

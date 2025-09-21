@@ -3,7 +3,7 @@
 #include "../configparser/initialize.hpp"
 
 // 用于信号处理的全局服务器指针
-WebServer* g_server = nullptr;
+WebServer* g_server = NULL;
 
 // 优雅关闭的信号处理函数
 void signalHandler(int signal) {
