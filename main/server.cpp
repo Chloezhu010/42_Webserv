@@ -26,8 +26,8 @@ void setupSignalHandlers() {
 }
 
 void printUsage(const char* programName) {
-    std::cout << "用法: " << programName << " <配置文件>" << std::endl;
-    std::cout << "示例: " << programName << " config/webserv.conf" << std::endl;
+    std::cout << "Usage: " << programName << " <config_file>" << std::endl;
+    std::cout << "Example: " << programName << " config/webserv.conf" << std::endl;
 }
 
 int main(int argc, char* argv[]) {

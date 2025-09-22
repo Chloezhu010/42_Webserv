@@ -2,11 +2,15 @@
 
 // default constructor
 ClientConnection::ClientConnection() 
-    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false), last_active(time(NULL)), http_request(NULL), http_response(NULL) {}
+    : fd(-1), bytes_sent(0), request_complete(false), response_ready(false), 
+    last_active(time(NULL)), http_request(NULL), http_response(NULL), server_instance(NULL), matched_location(NULL)
+{}
 
 // constructor with param
 ClientConnection::ClientConnection(int socket_fd) 
-    : fd(socket_fd), bytes_sent(0), request_complete(false), response_ready(false), last_active(time(NULL)), http_request(NULL), http_response(NULL) {}
+    : fd(socket_fd), bytes_sent(0), request_complete(false), response_ready(false), 
+    last_active(time(NULL)), http_request(NULL), http_response(NULL), server_instance(NULL), matched_location(NULL)
+{}
 
 // default destructor
 ClientConnection::~ClientConnection()

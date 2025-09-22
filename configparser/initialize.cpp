@@ -119,6 +119,7 @@ LocationConfig* ServerInstance::findMatchingLocation(const std::string& path) {
     LocationConfig* bestMatch = NULL;
     size_t maxLength = 0;
     
+    // location iteration
     for (size_t i = 0; i < config.locations.size(); ++i) {
         LocationConfig& location = config.locations[i];
         // 简单的前缀匹配
@@ -411,14 +412,15 @@ void ServerInstance::cleanup() {
 }
 
 ServerInstance* WebServer::findServerByHost(const std::string& hostHeader, int port) {
+    // port lookup: find all servers listening on this port
     std::map<int, std::vector<ServerInstance*> >::iterator it = portToServers.find(port);
     if (it == portToServers.end()) {
-        return NULL;
+        return NULL; // no server listening on this port
     }
     
     const std::vector<ServerInstance*>& serverList = it->second;
     
-    // 首先尝试精确匹配服务器名
+    // host header lookup: find the server that matches the host header
     for (size_t i = 0; i < serverList.size(); ++i) {
         ServerInstance* server = serverList[i];
         if (server->matchesServerName(hostHeader)) {
@@ -426,8 +428,19 @@ ServerInstance* WebServer::findServerByHost(const std::string& hostHeader, int p
         }
     }
     
-    // 如果没有找到匹配的，返回第一个（默认服务器）
+    // default server fallback: if no exact match, return the 1st server as default
     return serverList.empty() ? NULL : serverList[0];
+}
+
+int WebServer::getPortFromClientSocket(int clientFd) {
+    // init
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    // get socket name
+    if (getsockname(clientFd, (struct sockaddr*)&addr, &addrlen) == 0)
+        return ntohs(addr.sin_port);
+    // error case
+    return -1;
 }
 
 const Config& WebServer::getConfig() const {
@@ -607,7 +620,6 @@ void WebServer::handleNewConnection(int serverFd) {
     // 创建客户端连接对象
     ClientConnection* conn = new ClientConnection(clientFd);
     conn->last_active = time(NULL); // init last active time
-    // std::cout << "🚧 DEBUG: initial last_active time: " << conn->last_active << std::endl;
     clientConnections[clientFd] = conn;
     
     // 更新maxFd
@@ -650,7 +662,6 @@ void WebServer::handleClientRequest(int clientFd) {
         return;
     } else {
         buffer[bytesRead] = '\0';
-        // std::cout << "🚧 DEBUG: received " << bytesRead << " bytes: [" << buffer << "]" << std::endl;
         conn->request_buffer += buffer;
         conn->last_active = time(NULL); // update last active time
     }
@@ -668,20 +679,32 @@ void WebServer::handleClientRequest(int clientFd) {
         conn->request_complete = true;
         if (parseHttpRequest(conn)) // parse & validate request successfully
         {
+            // extract host header and port
+            std::string host = conn->http_request->getHost();
+            int port = getPortFromClientSocket(clientFd); 
+            // find the matching server instance, if not found, fall back to the first server
+            if (port == -1)
+                conn->server_instance = servers.empty() ? NULL : servers[0];
+            else
+                conn->server_instance = findServerByHost(host, port);
+            // extract request uri
+            std::string uri = conn->http_request->getURI();
+            // find the matching location, if not found, set to NULL
+            conn->matched_location = conn->server_instance->findMatchingLocation(uri);
+
+            // build the response
             buildHttpResponse(conn);
+            // mark response ready
             conn->response_ready = true;
         }
         else // parse & validate request fails
         {
             
-            // std::cout << "🚧 request validation status: " << conn->http_request->getValidationStatus() << std::endl;
             conn->http_response->resultToStatusCode(conn->http_request->getValidationStatus());
-            // std::cout << "🚧 response status code: " << conn->http_response->getStatusCode() << std::endl;
             conn->response_buffer = conn->http_response->buildErrorResponse(conn->http_response->getStatusCode(), "TBU", *conn->http_request);
             conn->response_ready = true;
         }
     }
-    // TBU: need to customize the error msg to accomendate request_too_large
     else if (status == REQUEST_TOO_LARGE)
     {
         conn->response_buffer = conn->http_response->buildErrorResponse(413, "TBU", *conn->http_request);
@@ -831,51 +854,6 @@ void WebServer::handleClientResponse(int clientFd) {
         std::cerr << "send() failed: " << strerror(errno) << std::endl;
         closeClientConnection(clientFd);
     }
-}
-
-void WebServer::sendStaticFile(ClientConnection* conn, const std::string& filePath) {
-    std::ifstream file(filePath.c_str(), std::ios::binary);
-    if (!file.is_open()) {
-        send404Response(conn);
-        return;
-    }
-    
-    // 获取文件大小
-    file.seekg(0, std::ios::end);
-    size_t fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
-    
-    // 读取文件内容
-    std::string content;
-    content.resize(fileSize);
-    file.read(&content[0], fileSize);
-    file.close();
-    
-    // 构建HTTP响应
-    std::ostringstream response;
-    response << "HTTP/1.1 200 OK\r\n";
-    response << "Content-Type: text/html\r\n";
-    response << "Content-Length: " << fileSize << "\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
-    response << content;
-    
-    conn->response_buffer = response.str();
-    std::cout << "Serving file: " << filePath << " (" << fileSize << " bytes)" << std::endl;
-}
-
-void WebServer::send404Response(ClientConnection* conn) {
-    std::string content = "<html><body><h1>404 Not Found</h1></body></html>";
-    
-    std::ostringstream response;
-    response << "HTTP/1.1 404 Not Found\r\n";
-    response << "Content-Type: text/html\r\n";
-    response << "Content-Length: " << content.length() << "\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
-    response << content;
-    
-    conn->response_buffer = response.str();
 }
 
 void WebServer::resetConnectionForResue(ClientConnection* conn) {

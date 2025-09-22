@@ -43,9 +43,9 @@ public:
 // Web服务器主类
 class WebServer {
 private:
-    Config config;
-    std::vector<ServerInstance*> servers;
-    std::map<int, std::vector<ServerInstance*> > portToServers; // 端口到服务器的映射
+    Config config; // main storage for config
+    std::vector<ServerInstance*> servers; // each holds ServerConfig copy
+    std::map<int, std::vector<ServerInstance*> > portToServers; // port mapping
     bool initialized;
     bool running;
 
@@ -60,8 +60,8 @@ private:
     void resetConnectionForResue(ClientConnection* conn);
     bool parseHttpRequest(ClientConnection* conn);
     void buildHttpResponse(ClientConnection* conn);
-    void sendStaticFile(ClientConnection* conn, const std::string& filePath);
-    void send404Response(ClientConnection* conn);
+    // void sendStaticFile(ClientConnection* conn, const std::string& filePath); // replaced by HttpResponse class
+    // void send404Response(ClientConnection* conn); // replaced by HttpResponse class
     void updateMaxFd();// 最大fd值
     
     // 初始化辅助方法
@@ -77,21 +77,22 @@ public:
     WebServer();
     ~WebServer();
     
-    // 主要初始化方法
-    bool initialize(const std::string& configFile);
-    bool initializeFromConfig(const Config& cfg);
+    /* initialization */
+    bool initialize(const std::string& configFile); // parse config file andd setup server instance
+    bool initializeFromConfig(const Config& cfg); // create ServerInstance objects from parsed config
     
-    // 服务器控制
-    bool start();
-    void stop();
+    /* server lifecycle */
+    bool start(); // start listening on all configured ports
+    void stop(); // gracefully shut down all servers
     bool isRunning() const { return running; }
     
     // 获取服务器信息 - 只保留声明，定义移到 .cpp 文件
     const Config& getConfig() const;
     size_t getServerCount() const;
-    ServerInstance* findServerByHost(const std::string& hostHeader, int port);
+    ServerInstance* findServerByHost(const std::string& hostHeader, int port); // virtual host routing, by match http host header to server config
+    int getPortFromClientSocket(int clientFd); // extract port from client socket
     
-	void run();  // 主事件循环
+	void run();  // main event loop using select() for I/O multiplexing
 
     // 错误处理
     std::string getLastError() const;

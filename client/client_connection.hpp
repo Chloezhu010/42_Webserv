@@ -5,8 +5,12 @@
 #include <ctime>
 #include "../http/http_request.hpp" // handle http request
 #include "../http/http_response.hpp" // handle http response
+#include "../configparser/config.hpp" // for server & location config
 
-// 客户端连接状态
+// forward declaration
+class ServerInstance;
+struct LocationConfig;
+
 struct ClientConnection {
     int fd;
     std::string request_buffer;  // 存储接收到的请求数据
@@ -19,6 +23,10 @@ struct ClientConnection {
     // handle http request & response
     HttpRequest* http_request; // request parsing & validation
     HttpResponse* http_response; // response building
+
+    // config context for this connection
+    ServerInstance* server_instance; // which server is handling this request
+    LocationConfig* matched_location; // which location matched the URI
     
     // 默认构造函数（C++98需要）
     ClientConnection();
