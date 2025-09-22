@@ -745,15 +745,54 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
     return true;
 }
 
+static void generateDirListing(ClientConnection* conn, const std::string& dir_path)
+{
+    // generate HTML dir listing
+    // TODO
+}
+
 /* helper function for buildHttpResponse
     - build the response for GET
 */
 static void handleGetResponse(ClientConnection* conn, std::string& uri)
 {
+    /* OLD: hardcoded version */
     // map uri to file path
-    std::string file_path = "./www" + uri;
+    // std::string file_path = "./www" + uri;
+
+    /* UPDATED: integrate config info */
+    // extract server config root path
+    std::string root = conn->server_instance->getConfig().root;
+    // extract location config root path if matched
+    if (conn->matched_location && !conn->matched_location->root.empty())
+        root = conn->matched_location->root; // location-specific root overrides server root
+    // construct the full file path
+    std::string file_path = root + uri;
+    // handle directory request with index files
     if (uri == "/")
-        file_path = "./www/index.html";
+    {
+        // use config index files
+        std::vector<std::string> index_files = conn->server_instance->getConfig().index;
+        if (conn->matched_location && !conn->matched_location->index.empty())
+            index_files = conn->matched_location->index; // location-specific index overrides server index
+        // try each index file in order
+        for (size_t i = 0; i < index_files.size(); ++i)
+        {
+            std::string index_path = file_path + index_files[i];
+            if (access(index_path.c_str(), F_OK) == 0) // file exists
+            {
+                file_path = index_path;
+                break;
+            }
+        }
+        // if no index file found, and autoindex is enabled, could generate dir listing page
+        if (conn->matched_location && conn->matched_location->autoindex)
+        {
+            generateDirListing(conn, file_path);
+            return;
+        }
+    }
+
     // use HttpResponse to serve the file
     conn->response_buffer = conn->http_response->buildFileResponse(file_path, *conn->http_request);
 }
