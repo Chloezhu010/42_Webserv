@@ -748,52 +748,135 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
 static void generateDirListing(ClientConnection* conn, const std::string& dir_path)
 {
     // generate HTML dir listing
-    // TODO
+    std::ostringstream html;
+    html << "<html><head><title>Directory Listing</title></head>\r\n";
+    html << "<body><h1>Index of " << dir_path << "</h1>\r\n";
+    html << "</ul></body></html>";
+    conn->http_response->setStatusCode(200);
+    conn->http_response->setHeader("Content-Type", "text/html");
+    conn->http_response->setBody(html.str());
+    conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
 
-/* helper function for buildHttpResponse
-    - build the response for GET
-*/
-static void handleGetResponse(ClientConnection* conn, std::string& uri)
+/* helper function for handleGetResponse */
+static void handleDirRequest(ClientConnection* conn, const std::string& file_path, const std::string& uri)
 {
-    /* OLD: hardcoded version */
-    // map uri to file path
-    // std::string file_path = "./www" + uri;
+    // URI should have trailing slash (redirect if missing)
+    (void)uri; // TODO
 
-    /* UPDATED: integrate config info */
-    // extract server config root path
-    std::string root = conn->server_instance->getConfig().root;
-    // extract location config root path if matched
-    if (conn->matched_location && !conn->matched_location->root.empty())
-        root = conn->matched_location->root; // location-specific root overrides server root
-    // construct the full file path
-    std::string file_path = root + uri;
-    // handle directory request with index files
-    if (uri == "/")
+    // get index files from config (location overrides server)
+    std::vector<std::string> index_files = conn->server_instance->getConfig().index;
+    if (conn->matched_location && !conn->matched_location->index.empty())
+        index_files = conn->matched_location->index; // location-specific index overrides server index
+    // try each index file in order
+    for (size_t i = 0; i < index_files.size(); ++i)
     {
-        // use config index files
-        std::vector<std::string> index_files = conn->server_instance->getConfig().index;
-        if (conn->matched_location && !conn->matched_location->index.empty())
-            index_files = conn->matched_location->index; // location-specific index overrides server index
-        // try each index file in order
-        for (size_t i = 0; i < index_files.size(); ++i)
+        std::string index_path = file_path;
+        // add trailing slash if missing
+        if (index_path[index_path.length() - 1] != '/')
+            index_path += "/";
+        index_path += index_files[i];
+        // if file exists, serve it
+        if (access(index_path.c_str(), F_OK) == 0) // file exists
         {
-            std::string index_path = file_path + index_files[i];
-            if (access(index_path.c_str(), F_OK) == 0) // file exists
-            {
-                file_path = index_path;
-                break;
-            }
-        }
-        // if no index file found, and autoindex is enabled, could generate dir listing page
-        if (conn->matched_location && conn->matched_location->autoindex)
-        {
-            generateDirListing(conn, file_path);
+            conn->response_buffer = conn->http_response->buildFileResponse(index_path, *conn->http_request);
             return;
         }
     }
+    // no index file found, check autoindex enabled
+    if (conn->matched_location && conn->matched_location->autoindex)
+    {
+        generateDirListing(conn, file_path);
+        return;
+    }
+    // no index file found, no autoindex enabled
+    conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
+}
 
-    // use HttpResponse to serve the file
+/* helper function for handleGetResponse
+    - check for method permission in the config
+*/
+static bool isMethodAllowed(const std::string& method, const LocationConfig* location)
+{
+    // if no location matched, allow all methods by default
+    if (!location)
+        return true;
+    // if location has no methods specified, allow all methods
+    if (location->allowMethods.empty())
+        return true;
+    // check if method is in the allowed methods list
+    for (size_t i = 0; i < location->allowMethods.size(); ++i)
+    {
+        if (method == location->allowMethods[i]) // method found in the list
+            return true;
+    }
+    return false; // method not found in the list
+}
+
+/* helper function for buildHttpResponse： handle redirects */
+static void handleRedirect(ClientConnection* conn)
+{
+    // extract redirect string from location config
+    std::string redirect_str = conn->matched_location->redirect;
+    // parse the redirect str, eg. "301 /newpath"
+    size_t space_pos = redirect_str.find(' ');
+    if (space_pos == std::string::npos)
+    {
+        conn->response_buffer = conn->http_response->buildErrorResponse(500, "Internal Server Error", *conn->http_request);
+        return;
+    }
+    int status_code = atoi(redirect_str.substr(0, space_pos).c_str());
+    std::string redirect_url = redirect_str.substr(space_pos + 1);
+    // build redirect response
+    conn->http_response->setStatusCode(status_code);
+    conn->http_response->setHeader("Location", redirect_url);
+    conn->http_response->setBody("");
+    conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
+    // log redirect
+    std::cout << "Redirecting to: " << redirect_url << " (" << status_code << ")" << std::endl;
+}
+
+/* helper function for buildHttpResponse： build the response for GET */
+static void handleGetResponse(ClientConnection* conn, std::string& uri)
+{
+    /* check for method permission */
+    if (!isMethodAllowed("GET", conn->matched_location))
+    {
+        conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
+        return;
+    }
+
+    /* check for redirects */
+    if (conn->matched_location && !conn->matched_location->redirect.empty())
+    {
+        std::cout << "🚧 DEBUG: redirect str " << conn->matched_location->redirect << std::endl;
+        handleRedirect(conn);
+        return;
+    }
+
+    /* determine root path 
+        - extract root from server config / location config
+    */
+    std::string root = conn->server_instance->getConfig().root;
+    if (conn->matched_location && !conn->matched_location->root.empty())
+        root = conn->matched_location->root; // location-specific root overrides server root
+
+    /* construct the full file path */
+    std::string file_path = root + uri;
+
+    /* handle directory request
+        - check if it's a directory request
+        - if directory, check for index files
+        - if no index files, check for autoindex
+    */
+    struct stat file_stat;
+    if (stat(file_path.c_str(), &file_stat) == 0 && S_ISDIR(file_stat.st_mode)) // is directory
+    {
+        handleDirRequest(conn, file_path, uri);
+        return;
+    }
+    
+    /* serve the file */
     conn->response_buffer = conn->http_response->buildFileResponse(file_path, *conn->http_request);
 }
 

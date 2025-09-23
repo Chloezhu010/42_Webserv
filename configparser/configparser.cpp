@@ -675,8 +675,15 @@ void ConfigParser::parseCgi(LocationConfig& location, const std::vector<std::str
 }
 
 void ConfigParser::parseRedirect(LocationConfig& location, const std::vector<std::string>& args) {
-    if (!args.empty()) {
-        location.redirect = args[0];
+    // if (!args.empty()) {
+    //     location.redirect = args[0];
+    // }
+    if (args.size() >= 2) {
+        // store both status code and URL
+        location.redirect = args[0] + " " + args[1];
+    } else if (args.size() == 1) {
+        // default to 302 if only URL is provided
+        location.redirect = "302 " + args[0];
     }
 }
 
