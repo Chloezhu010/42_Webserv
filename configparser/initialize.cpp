@@ -573,8 +573,15 @@ void WebServer::run() {
             if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
                 // For HTTP/1.1, keep the connection alive by default unless "Connection: close"
                 bool keep_alive = false;
-                if (conn->http_request && conn->http_request->getIsParsed())
-                    keep_alive = conn->http_request->getConnection();
+                if (conn->http_response) {
+                    // check of response header reset the connection to close
+                    std::string response_connection = conn->http_response->getHeader("Connection");
+                    if (response_connection == "close")
+                        keep_alive = false;
+                    // if not, fall back to request header check
+                    else if (conn->http_request && conn->http_request->getIsParsed())
+                        keep_alive = conn->http_request->getConnection();
+                }
                 if (!keep_alive) {
                     closeClientConnection(clientFd); // close connection
                 }
@@ -1029,6 +1036,10 @@ void WebServer::resetConnectionForResue(ClientConnection* conn) {
         delete conn->http_response;
         conn->http_response = NULL;
     }
+    conn->server_instance = NULL;
+    conn->matched_location = NULL;
+    conn->last_active = time(NULL); 
+    // log reset
     std::cout << "Connection reset for reuse: fd=" << conn->fd << std::endl;
 }
 
