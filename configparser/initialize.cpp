@@ -115,22 +115,39 @@ int ServerInstance::getSocketForPort(int port) const {
     return (it != portToSocket.end()) ? it->second : -1;
 }
 
+
 LocationConfig* ServerInstance::findMatchingLocation(const std::string& path) {
     LocationConfig* bestMatch = NULL;
     size_t maxLength = 0;
-    
+
     // location iteration
     for (size_t i = 0; i < config.locations.size(); ++i) {
         LocationConfig& location = config.locations[i];
-        // 简单的前缀匹配
-        if (path.substr(0, location.path.length()) == location.path) {
-            if (location.path.length() > maxLength) {
-                maxLength = location.path.length();
-                bestMatch = &location;
-            }
+        bool match = false;
+
+        // 1. exact match
+        if (location.path == path)
+            match = true;
+        // 2. directory match: eg. /github/ should match /github
+        else if (location.path.length() > 1 && location.path[location.path.length() - 1] == '/'
+                 && path + "/" == location.path)
+            match = true;
+        // 3. prefix match with boundary checkes
+        else if (location.path.length() <= path.length()
+                && path.substr(0, location.path.length()) == location.path)
+                {
+                    // boundary check
+                    if (location.path[location.path.length() - 1] == '/' // location ends with '/'
+                        || path.length() == location.path.length() // exact length match
+                        || path[location.path.length()] == '/') // next char is '/
+                        match = true;
+                }
+        // update maxLength & bestMatch
+        if (match && location.path.length() > maxLength) {
+            maxLength = location.path.length();
+            bestMatch = &location;
         }
     }
-    
     return bestMatch;
 }
 
@@ -569,7 +586,7 @@ void WebServer::run() {
         }
 
         /* handle connection timeout
-            - auto close the connection when idle +10 seconds
+            - auto close the connection when idle +30 seconds
         */
         time_t current_time = time(NULL);
         for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
@@ -577,12 +594,9 @@ void WebServer::run() {
             {
                 ClientConnection* conn = it->second;
                 time_t elapse = current_time - conn->last_active;
-                // std::cout << "🚧 DEBUG: fd=" << it->first
-                //             << ", current_time: " << current_time
-                //             << ", last_active: " << conn->last_active
-                //             << ", elapse time: " << elapse << std::endl;
-                // 10 seconds timeout
-                if (elapse > 10)
+                
+                // 30 seconds timeout
+                if (elapse > 30)
                 {
                     int fd = it->first;
                     std::cout << "Connection timed out: fd=" << fd << std::endl;
