@@ -594,7 +594,7 @@ void WebServer::run() {
             {
                 ClientConnection* conn = it->second;
                 time_t elapse = current_time - conn->last_active;
-                
+
                 // 30 seconds timeout
                 if (elapse > 30)
                 {
@@ -850,7 +850,17 @@ static void handleRedirect(ClientConnection* conn)
     std::cout << "Redirecting to: " << redirect_url << " (" << status_code << ")" << std::endl;
 }
 
-/* helper function for buildHttpResponse： build the response for GET */
+/* helper function for buildHttpResponse： build the response for GET
+    - Method not allowed -> 405
+    - Redirect -> 3xx
+    - Path is directory
+        - index file exists -> 200 serve index file
+        - no index file, autoindex on -> 200 generate dir listing
+        - no index file, autoindex off -> 403
+    - Path is file
+        - file exists -> 200 serve file
+        - file not exists -> 404
+*/
 static void handleGetResponse(ClientConnection* conn, std::string& uri)
 {
     /* check for method permission */
@@ -859,7 +869,6 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
         conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
         return;
     }
-
     /* check for redirects */
     if (conn->matched_location && !conn->matched_location->redirect.empty())
     {
@@ -867,17 +876,14 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
         handleRedirect(conn);
         return;
     }
-
     /* determine root path 
         - extract root from server config / location config
     */
     std::string root = conn->server_instance->getConfig().root;
     if (conn->matched_location && !conn->matched_location->root.empty())
         root = conn->matched_location->root; // location-specific root overrides server root
-
     /* construct the full file path */
     std::string file_path = root + uri;
-
     /* handle directory request
         - check if it's a directory request
         - if directory, check for index files
@@ -889,7 +895,6 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
         handleDirRequest(conn, file_path, uri);
         return;
     }
-    
     /* serve the file */
     conn->response_buffer = conn->http_response->buildFileResponse(file_path, *conn->http_request);
 }
@@ -909,24 +914,39 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
 
-/* helper function for buildHttpResponse
-    - build the response for DELETE, should delete resources
+
+/* helper function for buildHttpResponse: build the response for DELETE, should delete resources
+    - Method not allowed -> 405
+    - Path is directory -> 403
+    - Path is file:
+        - File not exists -> 404
+        - Delete success -> 200
+        - Delete fail -> 403
 */
 static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
 {
-    // TODO: need to update incorporating config file uri 
-    // Map URI to file path
-    std::string file_path = "./www" + uri;
-    if (uri == "/")
-        file_path = "./www/index.html";
-    // if file doesn't exist
-    if (access(file_path.c_str(), F_OK) != 0)
-    {
-        conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
+    /* check for method permission */
+    if (!isMethodAllowed("DELETE", conn->matched_location)) {
+        conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
+        return;
     }
-    // if file exist, try to delete
-    else
+    /* determine root path */
+    std::string root = conn->server_instance->getConfig().root;
+    if (conn->matched_location && !conn->matched_location->root.empty())
+        root = conn->matched_location->root;
+    /* construct the full file path */
+    std::string file_path = root + uri;
+    /* check if the path is a directory */
+    struct stat file_stat;
+    if (stat(file_path.c_str(), &file_stat) == 0 && S_ISDIR(file_stat.st_mode)) // is directory
     {
+        conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
+        // handleDeleteDirRequest(conn, file_path);
+        return;
+    }
+    /* check the file and try to delete */
+    // if file exists
+    if (access(file_path.c_str(), F_OK) == 0) {
         // delete successfully
         if (unlink(file_path.c_str()) == 0)
         {
@@ -937,6 +957,8 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
         else
             conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
     }
+    else
+        conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
 }
 
 /* complete http response generation
