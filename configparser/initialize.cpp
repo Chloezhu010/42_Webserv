@@ -572,26 +572,29 @@ void WebServer::run() {
             // if the request response is ready, and completely sent, then close or reset the connection
             if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
                 // For HTTP/1.1, keep the connection alive by default unless "Connection: close"
-                bool keep_alive = false;
+                bool keep_alive = true;
                 if (conn->http_response) {
                     // check of response header reset the connection to close
                     std::string response_connection = conn->http_response->getHeader("Connection");
+                    std::cout << "🚧 DEBUG: response connection: " << response_connection << std::endl;
+                    std::cout << "🚧 DEBUG: request connection: " << conn->http_request->getConnection() << std::endl;
                     if (response_connection == "close")
                         keep_alive = false;
-                    // if not, fall back to request header check
-                    else if (conn->http_request && conn->http_request->getIsParsed())
+                    else
+                        keep_alive = true;
+                } 
+                else if (conn->http_request && conn->http_request->getIsParsed())
                         keep_alive = conn->http_request->getConnection();
-                }
-                if (!keep_alive) {
+                std::cout << "🚧 DEBUG: keep_alive: " << keep_alive << std::endl;
+
+                
+                if (!keep_alive)
                     closeClientConnection(clientFd); // close connection
-                }
-                else {
+                else
                     resetConnectionForResue(conn); // reset for next request
-                }
             }
             it = next_it; // move to next client in map
         }
-
         /* handle connection timeout
             - auto close the connection when idle +30 seconds
         */
@@ -651,6 +654,26 @@ void WebServer::handleNewConnection(int serverFd) {
     std::cout << "New connection accepted: fd=" << clientFd << std::endl;
 }
 
+/* helper function for handleClientRequest */
+static void trimValidateRequestBuffer(std::string& request_buffer) {
+    // trim leading CRLF (valid between requests)
+    size_t start = 0;
+    while (start < request_buffer.length())
+    {
+        char c = request_buffer[start];
+        if (c == '\r' || c == '\n')
+            start++; // skip leading CRLF
+        else
+            break; // stop when found non-CRLF char
+    }
+    // apply trim if found leading CRLF
+    if (start > 0)
+    {
+        request_buffer = request_buffer.substr(start);
+        // std::cout << "🚧 DEBUG: after trim, request_buffer: [" << request_buffer << "]" << std::endl;  
+    }
+}
+
 /* complete handle client request, integrated with HttpRequest
     - request reception
     - check request completeness
@@ -693,8 +716,16 @@ void WebServer::handleClientRequest(int clientFd) {
         conn->http_request = new HttpRequest();
     if (!conn->http_response)
         conn->http_response = new HttpResponse();
+
+    
+    // std::cout << "🚧 DEBUG: Current request_buffer: [" << conn->request_buffer << "]" << std::endl;
+    // trim the request line if there is leading CRLF
+    trimValidateRequestBuffer(conn->request_buffer);
+
     // check request completeness
     RequestStatus status = conn->http_request->isRequestComplete(conn->request_buffer);
+    // std::cout << "🚧 DEBUG: isRequestComplete status: " << status << std::endl;
+
     if (status == REQUEST_COMPLETE) // request is complete
     {
         conn->request_complete = true;
@@ -728,7 +759,7 @@ void WebServer::handleClientRequest(int clientFd) {
     }
     else if (status == REQUEST_TOO_LARGE)
     {
-        conn->response_buffer = conn->http_response->buildErrorResponse(413, "TBU", *conn->http_request);
+        conn->response_buffer = conn->http_response->buildErrorResponse(413, "Content Too Large", *conn->http_request);
         conn->response_ready = true;
     }
     else if (status == INVALID_REQUEST)
@@ -879,7 +910,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
     /* check for redirects */
     if (conn->matched_location && !conn->matched_location->redirect.empty())
     {
-        std::cout << "🚧 DEBUG: redirect str " << conn->matched_location->redirect << std::endl;
+        // std::cout << "🚧 DEBUG: redirect str " << conn->matched_location->redirect << std::endl;
         handleRedirect(conn);
         return;
     }
@@ -1023,7 +1054,10 @@ void WebServer::handleClientResponse(int clientFd) {
 
 void WebServer::resetConnectionForResue(ClientConnection* conn) {
     // reset connection state for next request
+
+    // std::cout << "🚧 DEBUG: before reset, request_buffer: [" << conn->request_buffer << "]" << std::endl;
     conn->request_buffer.clear();
+    // std::cout << "🚧 DEBUG: afer reset, request_buffer: [" << conn->request_buffer << "]" << std::endl;
     conn->response_buffer.clear();
     conn->bytes_sent = 0;
     conn->request_complete = false;

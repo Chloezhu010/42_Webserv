@@ -4,8 +4,21 @@
 // Constructors & Destructors                                                  
 // ============================================================================
     
-HttpRequest::HttpRequest(): is_complete_(false), is_parsed_(false),
-    validation_status_(NOT_VALIDATED), content_length_(-999), chunked_encoding_(false), keep_alive_(true)
+HttpRequest::HttpRequest():
+    method_str_(""),
+    full_uri_(""),
+    uri_(""),
+    query_string_(""),
+    http_version_(""),
+    headers_(),
+    body_(""),
+    is_complete_(false),
+    is_parsed_(false),
+    validation_status_(NOT_VALIDATED),
+    content_length_(-999),
+    chunked_encoding_(false),
+    connection_str_(""),
+    keep_alive_(true)
 {}
 
 HttpRequest::~HttpRequest()
