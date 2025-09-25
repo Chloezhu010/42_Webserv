@@ -100,6 +100,46 @@ long HttpRequest::extractContentLength(const std::string& header_section) const
     return content_length;
 }
 
+/* extract the media type from content-type header
+    - return empty string if not found
+    - return media type if found ';', e.g. "text/html", "multipart/form-data" etc.
+    - return the original content_type if no ';' found
+*/
+std::string HttpRequest::extractMediaType(const std::string& content_type) const
+{
+    if (content_type.empty())
+        return "";
+    // extract media-type before ';'
+    size_t semicolon_pos = content_type.find(';');
+    if (semicolon_pos != std::string::npos) {
+        std::string media_type = content_type.substr(0, semicolon_pos);
+        // trim space
+        size_t start = media_type.find_first_not_of(" \t\r\n");
+        size_t end = media_type.find_last_not_of(" \t\r\n");
+        if (start != std::string::npos && end != std::string::npos)
+            return media_type.substr(start, end - start + 1);
+    }
+    return content_type; // no ';', return as is
+}
+
+/* extract the boundary content after "boundary=" */
+std::string HttpRequest::extractBoundary(const std::string& content_type) const
+{
+    // TBU
+
+}
+
+bool HttpRequest::isSupportedMediaType(const std::string& content_type) const
+{
+    // TBU
+}
+
+bool HttpRequest::parseMultipartFormData()
+{
+    // TBU
+}
+
+
 // ============================================================================
 // Phase 1 Completeness check                                                  
 // ============================================================================
@@ -942,6 +982,14 @@ std::string HttpRequest::getHost() const
 bool HttpRequest::getConnection() const
 {
     return keep_alive_;
+}
+
+// return the content-type value from the header, empty string if not found
+std::string HttpRequest::getContentType() const {
+    std::multimap<std::string, std::string>::const_iterator it = headers_.find("content-type");
+    if (it != headers_.end())
+        return it->second;
+    return "";
 }
 
 // return the validation request result

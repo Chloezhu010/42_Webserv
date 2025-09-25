@@ -168,6 +168,13 @@ public:
     bool methodCanHaveBody(const std::string& method) const;
     bool isChunkedEncoding() const;
 
+    // content-type
+    std::string extractMediaType(const std::string& content_type) const;
+    std::string extractBoundary(const std::string& content_type) const;
+    bool isSupportedMediaType(const std::string& content_type) const;
+    bool parseMultipartFormData();
+
+
     // ============================================================================
     // Getters                                                  
     // ============================================================================
