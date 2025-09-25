@@ -772,6 +772,28 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
         std::string method = conn->http_request->getMethodStr();
         std::string uri = conn->http_request->getURI();
 
+        // 首先检查是否为CGI请求
+        std::string hostHeader = conn->http_request->getHost();
+        // 需要从Host header中提取端口信息来找到正确的服务器实例
+        int port = 8080; // 默认端口，实际应该从连接信息获取
+        ServerInstance* server = findServerByHost(hostHeader, port);
+
+        if (server) {
+            LocationConfig* location = findMatchingLocationForServer(uri, server);
+            if (location && CGIHandler::isCGIRequest(uri, *location)) {
+                std::cout << "🔧 CGI request detected for URI: " << uri << std::endl;
+                if (handleCGIRequest(conn, uri, *location)) {
+                    return; // CGI处理成功，直接返回
+                }
+                // CGI处理失败，返回502错误
+                std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
+                conn->response_buffer = conn->http_response->buildErrorResponse(502, "Bad Gateway", *conn->http_request);
+                conn->response_ready = true;
+                return;
+            }
+        }
+
+        // 非CGI请求，使用原有的处理逻辑
         if (method == "GET")
             handleGetResponse(conn, uri);
         else if (method == "POST")
@@ -906,4 +928,41 @@ void WebServer::updateMaxFd() {
             maxFd = it->first; // update maxFd if client fd is higher
         }
     }
+}
+
+// =================== CGI Integration Methods ===================
+
+bool WebServer::handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location) {
+    std::cout << "🔧 Handling CGI request: " << uri << std::endl;
+
+    // 构建脚本的完整路径
+    std::string scriptPath = location.root + uri;
+    if (location.root.empty()) {
+        scriptPath = "./www" + uri; // 默认www目录
+    }
+
+    std::cout << "📁 Script path: " << scriptPath << std::endl;
+    std::cout << "🛠️  CGI program: " << location.cgiPath << std::endl;
+    std::cout << "📝 Extension: " << location.cgiExtension << std::endl;
+
+    // 执行CGI
+    std::string response;
+    if (cgiHandler_.execute(*conn->http_request, location, scriptPath, response)) {
+        conn->response_buffer = response;
+        conn->response_ready = true;
+        std::cout << "✅ CGI request handled successfully" << std::endl;
+        return true;
+    }
+
+    std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
+    return false;
+}
+
+LocationConfig* WebServer::findMatchingLocationForServer(const std::string& uri, ServerInstance* server) {
+    if (!server) {
+        return NULL;
+    }
+
+    // 使用ServerInstance的现有方法来查找匹配的location
+    return server->findMatchingLocation(uri);
 }

@@ -5,7 +5,11 @@ SRC = ./main/server.cpp \
 	  ./configparser/configdisplay.cpp \
 	  ./http/http_response.cpp \
 	  ./http/http_request.cpp \
-	  ./client/client_connection.cpp
+	  ./client/client_connection.cpp \
+	  ./cgi/cgi_handler.cpp \
+	  ./cgi/cgi_environment.cpp \
+	  ./cgi/cgi_process.cpp \
+	  ./cgi/cgi_response.cpp
 OBJ = $(SRC:.cpp=.o)
 CC = c++
 
