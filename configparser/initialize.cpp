@@ -937,17 +937,49 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
     conn->response_buffer = conn->http_response->buildFileResponse(file_path, *conn->http_request);
 }
 
-/* helper function for buildHttpResponse
-    - build the response for POST, should process the data
+/* helper function for buildHttpResponse: build the response for POST, should process the data
+    - Method not allowed -> 405
+    - Client body too large -> 413
+    - Success -> 200
 */
 static void handlePostResponse(ClientConnection* conn, std::string& uri)
 {
-    // TODO: need to update incorporating config file uri 
-    (void)uri;
-    // set success state and body for response
+    /* check for method permission */
+    if (!isMethodAllowed("POST", conn->matched_location)) {
+        conn->request_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
+        return;
+    }
+    /* determine root path */
+    std::string root = conn->server_instance->getConfig().root;
+    if (conn->matched_location && !conn->matched_location->root.empty())
+        root = conn->matched_location->root;
+    /* construct the full file path */
+    std::string file_path = root + uri;
+    /* client body size validation */
+    size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
+    size_t requestBodySize = conn->http_request->getBody().size();
+    if (requestBodySize > configMaxBodySize) {
+        conn->response_buffer = conn->http_response->buildErrorResponse(413, "Content Too Large", *conn->http_request);
+        return;
+    }
+
+    /* CGI support */
+    // detect CGI request based on location config
+
+    // set up environment variables
+
+    // execute the script with the configured interpreter
+
+    // capture stdout and return it as HTTP response
+
+    /* handle file upload */
+
+
+    // Simple version: set success state and body for response
     conn->http_response->setStatusCode(200);
     conn->http_response->setBody("<h1>POST successful</h1>\r\n\r\n");
     conn->http_response->setHeader("Content-Type", "text/html");
+    
     // update the response_buffer
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
