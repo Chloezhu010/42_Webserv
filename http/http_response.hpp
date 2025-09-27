@@ -21,10 +21,11 @@ private:
     // Helper methods
     std::string getReasonPhrase() const;
     std::string getCurrentDateGMT() const;
-    std::string getContentType(const std::string& file_path) const;
     std::string generateErrorPage(int status_code, const std::string& reason) const;
-    
+
 public:
+    // Utility methods
+    std::string getContentType(const std::string& file_path) const;
     // Constructor & Destructor
     HttpResponse();
     explicit HttpResponse(int status_code);

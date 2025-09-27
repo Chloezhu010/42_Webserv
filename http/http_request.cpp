@@ -1,7 +1,19 @@
 #include "http_request.hpp"
+#include "http_response.hpp"
 
 // ============================================================================
-// Constructors & Destructors                                                  
+// FileUpload Constructors
+// ============================================================================
+
+FileUpload::FileUpload() : name(""), filename(""), content_type(""), content(""), size(0) {
+}
+
+FileUpload::FileUpload(const std::string& name, const std::string& type, const std::string& data)
+    : name(name), filename(""), content_type(type), content(data), size(data.length()) {
+}
+
+// ============================================================================
+// Constructors & Destructors
 // ============================================================================
     
 HttpRequest::HttpRequest():
@@ -122,21 +134,206 @@ std::string HttpRequest::extractMediaType(const std::string& content_type) const
     return content_type; // no ';', return as is
 }
 
-/* extract the boundary content after "boundary=" */
+/* extract the boundary content after "boundary="
+    - return empty string if not found
+    - return the boundary string if found
+    - trim space around the boundary string
+*/
 std::string HttpRequest::extractBoundary(const std::string& content_type) const
 {
-    // TBU
+    // convert to lower case for case-insensitive search
+    std::string lowercase_ct = content_type;
+    std::transform(lowercase_ct.begin(), lowercase_ct.end(), lowercase_ct.begin(), ::tolower);
 
+    // find "boundary"
+    size_t boundary_pos = lowercase_ct.find("boundary");
+    if (boundary_pos == std::string::npos)
+        return ""; // not found
+
+    // find the "=" after boundary
+    size_t equal_pos = lowercase_ct.find('=', boundary_pos + 8); // 8 is length of "boundary"
+    if (equal_pos == std::string::npos)
+        return ""; // not found
+
+    // extract value after "=" from original string
+    size_t value_start = equal_pos + 1; // skip the '='
+    size_t value_end = content_type.find(';', value_start);
+    if (value_end == std::string::npos)
+        value_end = content_type.length(); // till end if no ';'
+    std::string boundary = content_type.substr(value_start, value_end - value_start);
+
+    // trim space
+    size_t trim_start = boundary.find_first_not_of(" \t\r\n");
+    size_t trim_end = boundary.find_last_not_of(" \t\r\n");
+    if (trim_start != std::string::npos && trim_end != std::string::npos)
+        boundary = boundary.substr(trim_start, trim_end - trim_start + 1);
+    
+    return boundary;
 }
 
-bool HttpRequest::isSupportedMediaType(const std::string& content_type) const
+// /* check the server if supports the given media type for processing */
+// bool HttpRequest::isSupportedMediaType(const std::string& content_type) const
+// {
+//     // TBU
+// }
+
+/* check if the content-type is "multipart/form-data" */
+bool HttpRequest::isMultipartFormData() const {
+    std::string content_type = getContentType();
+    std::string media_type = extractMediaType(content_type);
+    return (media_type == "multipart/form-data");
+}
+
+/* for content-disposition header
+    - valid cases
+        Content-Disposition: form-data; name="photo"; filename="vacation.jpg"
+        Content-Disposition: form-data; name="photo"; filename="vacation.jpg"
+        Content-Disposition: form-data; name=photo; filename=vacation.jpg
+        Content-Disposition: form-data; name="file"; filename="my document.pdf"
+    - invalid cases
+        Content-Disposition: form-data; name = "photo"; filename="vacation.jpg"
+        Content-Disposition: form-data; name= "photo"; filename ="vacation.jpg"  
+        Content-Disposition: form-data; name =photo; filename= vacation.jpg
+        Content-Disposition: form-data; name="photo" ; filename="vacation.jpg"
+*/
+static std::string extractQuoteValue(const std::string& headers, const std::string& key)
 {
-    // TBU
+    size_t pos = headers.find(key);
+    if (pos == std::string::npos)
+        return "";
+    pos += key.length();
+    // pos already at the end
+    if (pos >= headers.length())
+        return "";
+    // if the value start with "
+    if (headers[pos] == '"'){
+        // skip the opening quote
+        pos++;
+        size_t end = headers.find('"', pos);
+        if (end == std::string::npos)
+            return "";
+        return headers.substr(pos, end - pos);
+    } else // unquoted value
+    {
+        size_t end = pos;
+        // find end of the value (stops at semicolon, space, or end of string)
+        while (end < headers.length()
+                && headers[end] != ';' && headers[end] != ' ' && headers[end] != '\t'
+                && headers[end] != '\r' && headers[end] != '\n')
+            end++;
+        return headers.substr(pos, end - pos);
+    }
 }
 
+/* helper function for parseMultipartFormData()
+    - takes an individual multipart part (after boundary separation) 
+        and extracts the structured data from it
+*/
+bool HttpRequest::parseSinglePart(std::string part)
+{
+    // split content header from body
+    size_t header_end = part.find("\r\n\r\n");
+    if (header_end == std::string::npos)
+        return false;
+    std::string headers = part.substr(0, header_end);
+    std::string body = part.substr(header_end + 4);
+
+    // parse content-disposition header
+    std::string name = extractQuoteValue(headers, "name=");
+    // std::cout << "🚧 DEBUG: name: " << name << std::endl;
+    std::string filename = extractQuoteValue(headers, "filename=");
+    // std::cout << "🚧 DEBUG: filename: " << filename << std::endl;
+    if (name.empty()) // mandatory to have name, in RFC 7578
+        return false;
+
+    // determine if file upload or form field
+    if (!filename.empty()) // it's a file upload
+    {
+        FileUpload file;
+        file.name = name; // eg. "avatar"
+        file.filename = filename; // eg. "photo.jpg"
+        file.content = body; // [binary img data]
+        file.size = body.length(); // eg. 25234 bytes
+
+        HttpResponse temp_response;
+        file.content_type = temp_response.getContentType(filename); // eg. "image/jpeg"
+        // store in the files collection
+        file_uploads_.push_back(file);
+    } else { // it's a regular form field
+        form_fields_[name] = body;
+    }
+    return true;
+}
+
+/* parse the multipart/form data
+    - prepare for the parsing
+    - split the multipart/form data into single parts based on the boundary
+    - parse single part into structured data (FileUpload)
+    - return true/ false 
+*/
 bool HttpRequest::parseMultipartFormData()
 {
-    // TBU
+    // prep
+    std::string content_type = getContentType();
+    // std::cout << "DEBUG: content-type: " << content_type << std::endl;
+    std::string boundary = extractBoundary(content_type);
+    // std::cout << "DEBUG: boundary: " << boundary << std::endl;
+    if (boundary.empty())
+        return false; // boundary not found
+
+    // Add --prefix to boundary for parsing
+    std::string delimiter = "--" + boundary;
+    // std::cout << "DEBUG: delimiter: " << delimiter << std::endl;
+
+    // split body into parts
+    std::vector<std::string> parts;
+    size_t pos = 0;
+    // std::cout << "DEBUG body content: " << body_ << std::endl;
+    // std::cout << "DEBUG body length: " << body_.length() << std::endl;
+    while ((pos = body_.find(delimiter, pos)) != std::string::npos) {
+        
+        // skip the boundary delimiter
+        size_t content_start = pos + delimiter.length();
+        // std::cout << "DEBUG: content_start: " << content_start << std::endl;
+
+        // skip CRLF after boundary
+        if (content_start < body_.length() && body_[content_start] == '\r')
+            content_start++;
+        if (content_start < body_.length() && body_[content_start] == '\n')
+            content_start++;
+        
+        // find next boundary
+        size_t next_boundary = body_.find(delimiter, content_start);
+        // std::cout << "DEBUG: next_boundary: " << next_boundary << std::endl;
+        if (next_boundary == std::string::npos)
+            break;
+
+        // extract part content (excl. trailing CRLF)
+        size_t content_end = next_boundary;
+        if (content_end >= 2 && body_.substr(content_end - 2, 2) == "\r\n")
+            content_end -= 2; // remove the trailing \r\n
+        if (content_end > content_start){
+            std::string part = body_.substr(content_start, content_end - content_start);
+            // check if it's the final boundary
+            size_t final_pos = next_boundary + delimiter.length();
+            if (final_pos < body_.length() - 1 && body_.substr(final_pos, 2) == "--") {
+                parts.push_back(part);
+                break; // final boundary, push and break the loop
+            }
+            parts.push_back(part);
+        }
+        pos = next_boundary;
+        // std::cout << "DEBUG: pos: " << pos << std::endl;
+    }
+
+    // parse each part
+    for (size_t i = 0; i < parts.size(); ++i) {
+        // std::cout << "DEBUG: # of parts: " << parts.size() << std::endl;
+        if (!parseSinglePart(parts[i]))
+            return false;
+    }
+
+    return true;
 }
 
 
@@ -996,6 +1193,16 @@ std::string HttpRequest::getContentType() const {
 ValidationResult HttpRequest::getValidationStatus() const
 {
     return validation_status_;
+}
+
+std::vector<FileUpload> HttpRequest::getUploadedFiles() const
+{
+    return file_uploads_;
+}
+
+std::map<std::string, std::string> HttpRequest::getFormData() const
+{
+    return form_fields_;
 }
 
 // ============================================================================

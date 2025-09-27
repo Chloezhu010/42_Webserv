@@ -57,6 +57,18 @@ enum ValidationResult {
 
 };
 
+struct FileUpload {
+    std::string name; // form field name - Required
+    std::string filename; // original file name - Only present in file uploads
+    std::string content_type; // MIME type (image/jpeg, application/pdf, etc.)
+    std::string content; // binary file content
+    size_t size; // size of the file content in bytes
+
+    // constructors
+    FileUpload();
+    FileUpload(const std::string& name, const std::string& type, const std::string& data);
+};
+
 // constants (TBD)
 const size_t MAX_REQUEST_SIZE = 8*1024*1024;
 const size_t MAX_HEADER_SIZE = 8*1024;
@@ -93,6 +105,10 @@ private:
     // connection-related
     std::string connection_str_;
     bool keep_alive_;
+
+    // file upload related
+    std::vector<FileUpload> file_uploads_;
+    std::map<std::string, std::string> form_fields_;
 
 public:
     // ============================================================================
@@ -172,6 +188,8 @@ public:
     std::string extractMediaType(const std::string& content_type) const;
     std::string extractBoundary(const std::string& content_type) const;
     bool isSupportedMediaType(const std::string& content_type) const;
+    bool isMultipartFormData() const;
+    bool parseSinglePart(std::string part);
     bool parseMultipartFormData();
 
 
@@ -197,6 +215,10 @@ public:
     std::string getContentType() const;
     bool getConnection() const;
     ValidationResult getValidationStatus() const;
+
+    // multipart form data getters
+    std::vector<FileUpload> getUploadedFiles() const;
+    std::map<std::string, std::string> getFormData() const;
 
     // ============================================================================
     // Setters                                            

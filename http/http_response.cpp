@@ -165,8 +165,9 @@ std::string HttpResponse::getContentType(const std::string& file_path) const
     // 查找文件扩展名
     size_t dot_pos = file_path.find_last_of('.');
     if (dot_pos == std::string::npos)
-        return "text/plain; charset=UTF-8";
-        
+        // return "text/plain; charset=UTF-8";
+        return "application/octet-stream";
+
     std::string ext = file_path.substr(dot_pos + 1);
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     
@@ -193,6 +194,12 @@ std::string HttpResponse::getContentType(const std::string& file_path) const
         return "image/x-icon";
     else if (ext == "pdf")
         return "application/pdf";
+    else if (ext == "doc" || ext == "docx")
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    else if (ext == "mp4")
+        return "video/mp4";
+    else if (ext == "mp3")
+        return "audio/mpeg";
     else if (ext == "zip")
         return "application/zip";
     else
