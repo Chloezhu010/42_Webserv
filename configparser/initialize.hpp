@@ -13,7 +13,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <fstream>
 #include <unistd.h>
+#include <errno.h>
 
 // 服务器实例类
 class ServerInstance {

@@ -955,6 +955,7 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
         root = conn->matched_location->root;
     /* construct the full file path */
     std::string file_path = root + uri;
+
     /* client body size validation */
     size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
     size_t requestBodySize = conn->http_request->getBody().size();
@@ -973,12 +974,81 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
     // capture stdout and return it as HTTP response
 
     /* handle file upload */
+    // detect if the request is multipart/form data
+    if (conn->http_request->isMultipartFormData())
+    {
+        // parse multipart/form data
+        if (!conn->http_request->parseMultipartFormData())
+        {
+            conn->response_buffer = conn->http_response->buildErrorResponse(400, "Bad Request", *conn->http_request);
+            return;
+        }
+        // extract upload data
+        std::vector<FileUpload> files = conn->http_request->getUploadedFiles();
+        std::map<std::string, std::string> form_data = conn->http_request->getFormData();
 
+        // create upload dir if needed
+        if (mkdir(file_path.c_str(), 0755) != 0 && errno != EEXIST){
+            conn->response_buffer = conn->http_response->buildErrorResponse(500, "Internal Server Error - Cannot create upload directory", *conn->http_request);
+        }
 
-    // Simple version: set success state and body for response
-    conn->http_response->setStatusCode(200);
-    conn->http_response->setBody("<h1>POST successful</h1>\r\n\r\n");
-    conn->http_response->setHeader("Content-Type", "text/html");
+        // save the upload data
+        std::vector<std::string> saved_files;
+        for (size_t i = 0; i < files.size(); ++i) {
+            FileUpload& file = files[i];
+            std::string filename = file.filename;
+            std::string upload_path = file_path + "/" + filename;
+            std::cout << "🚧 DEBUG: upload path: " << upload_path << std::endl;
+            // save file.content to upload_path
+            if (filename.empty())
+                continue; // skip files without names
+            // open file for writing
+            std::ofstream outfile(upload_path.c_str(), std::ios::binary);
+            if (!outfile.is_open()) {
+                conn->response_buffer = conn->http_response->buildErrorResponse(500, "Internal Server Error - Cannot create file", *conn->http_request);
+                return;
+            }
+            // write file content
+            outfile.write(file.content.c_str(), file.content.size());
+            outfile.close();
+            if (outfile.fail()){
+                conn->response_buffer = conn->http_response->buildErrorResponse(500, "Internal Server Error - File write failed", *conn->http_request);
+                return;
+            }
+            saved_files.push_back(file.filename);
+        }
+        std::cout << "DEBUG: saved file size: " << saved_files.size() << std::endl;
+
+        // response generation
+        conn->http_response->setStatusCode(201);
+        conn->http_response->setHeader("Content-Type", "application/json");
+        std::ostringstream json_body;
+        json_body << "{";
+        json_body << "\"status\": \"success\",";
+        json_body << "\"message\": \"Files uploaded successfully\",";
+        json_body << "\"count\": " << saved_files.size() << ",";
+        json_body << "\"files\": [";
+
+        for (size_t i = 0; i < saved_files.size(); ++i) {
+            json_body << "{";
+            json_body << "\"name\": \"" << saved_files[i] << "\"";
+            json_body << "}";
+
+            if (i < saved_files.size() - 1)
+                json_body << ",";
+        }
+        json_body << "]}\r\n\r\n";
+
+        conn->http_response->setBody(json_body.str());
+    }
+    else // handle normal POST data
+    {
+        // Simple version: set success state and body for response
+        conn->http_response->setStatusCode(200);
+        conn->http_response->setBody("<h1>POST successful</h1>\r\n\r\n");
+        conn->http_response->setHeader("Content-Type", "text/html");
+    }
+    
     
     // update the response_buffer
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);

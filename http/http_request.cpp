@@ -171,12 +171,6 @@ std::string HttpRequest::extractBoundary(const std::string& content_type) const
     return boundary;
 }
 
-// /* check the server if supports the given media type for processing */
-// bool HttpRequest::isSupportedMediaType(const std::string& content_type) const
-// {
-//     // TBU
-// }
-
 /* check if the content-type is "multipart/form-data" */
 bool HttpRequest::isMultipartFormData() const {
     std::string content_type = getContentType();
@@ -791,10 +785,6 @@ bool HttpRequest::parseBody(const std::string& body_section) {
         body_ = "";
         return true;
     }
-    
-    // // 提前执行大小限制
-    // if (content_length_ > static_cast<long>(MAX_BODY_SIZE))
-    //     return false;
     
     // 对于POST：根据类型解析请求体
     if (chunked_encoding_) {
