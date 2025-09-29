@@ -6,6 +6,7 @@
 #include "../client/client_connection.hpp"
 #include "../http/http_request.hpp" // handle http request
 #include "../http/http_response.hpp" // handle http response
+#include "../cgi/cgi_handler.hpp" // CGI handler
 #include <vector>
 #include <map>
 #include <sys/socket.h>
@@ -54,7 +55,10 @@ private:
 
     std::map<int, ClientConnection*> clientConnections;  // fd -> 客户端连接
     fd_set readFds, writeFds;                           // select用的fd集合
-    int maxFd;           
+    int maxFd;
+
+    // CGI处理器
+    CGIHandler cgiHandler_;           
 	
 	void handleNewConnection(int serverFd);
     void handleClientRequest(int clientFd);
@@ -66,6 +70,10 @@ private:
     // void sendStaticFile(ClientConnection* conn, const std::string& filePath); // replaced by HttpResponse class
     // void send404Response(ClientConnection* conn); // replaced by HttpResponse class
     void updateMaxFd();// 最大fd值
+
+    // CGI处理方法
+    bool handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location);
+    LocationConfig* findMatchingLocationForServer(const std::string& uri, ServerInstance* server);
     
     // 初始化辅助方法
     bool validateConfig();
