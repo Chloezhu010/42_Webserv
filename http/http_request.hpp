@@ -188,6 +188,7 @@ public:
     std::string getHost() const;
     std::string getUserAgent() const;
     std::string getContentType() const;
+    std::string getHeader(const std::string& header_name) const;
     bool getConnection() const;
     ValidationResult getValidationStatus() const;
 

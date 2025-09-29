@@ -31,9 +31,7 @@ void CGIEnvironment::addStandardVars(const HttpRequest& request, const std::stri
     addVar("PATH_INFO", scriptPath);
     addVar("QUERY_STRING", request.getQueryString());
     addVar("CONTENT_LENGTH", toString(request.getBody().length()));
-    // TODO: 实现getContentType()后再添加
-    // addVar("CONTENT_TYPE", request.getContentType());
-    addVar("CONTENT_TYPE", "");
+    addVar("CONTENT_TYPE", request.getContentType());
 }
 
 void CGIEnvironment::addServerVars() {
@@ -48,8 +46,20 @@ void CGIEnvironment::addServerVars() {
 void CGIEnvironment::addRequestVars(const HttpRequest& request) {
     // 请求相关变量
     addVar("HTTP_HOST", request.getHost());
-    // TODO: 实现getUserAgent()后再添加
-    // addVar("HTTP_USER_AGENT", request.getUserAgent());
+    addVar("HTTP_USER_AGENT", request.getUserAgent());
+    addVar("HTTP_ACCEPT", request.getHeader("accept"));
+    addVar("HTTP_ACCEPT_LANGUAGE", request.getHeader("accept-language"));
+    addVar("HTTP_ACCEPT_ENCODING", request.getHeader("accept-encoding"));
+    addVar("HTTP_CONNECTION", request.getHeader("connection"));
+    addVar("HTTP_CACHE_CONTROL", request.getHeader("cache-control"));
+    addVar("HTTP_COOKIE", request.getHeader("cookie"));
+    addVar("HTTP_REFERER", request.getHeader("referer"));
+    addVar("HTTP_AUTHORIZATION", request.getHeader("authorization"));
+
+    // 客户端信息（本地连接）
+    addVar("REMOTE_ADDR", "127.0.0.1");
+    addVar("REMOTE_HOST", "localhost");
+    addVar("REMOTE_USER", "");
 }
 
 void CGIEnvironment::addVar(const std::string& name, const std::string& value) {

@@ -1,4 +1,5 @@
 #include "http_request.hpp"
+#include <algorithm>
 
 // ============================================================================
 // Constructors & Destructors                                                  
@@ -921,6 +922,35 @@ bool HttpRequest::getIsParsed() const
 std::string HttpRequest::getHost() const
 {
     std::multimap<std::string, std::string>::const_iterator it = headers_.find("host");
+    if (it != headers_.end())
+        return it->second;
+    return "";
+}
+
+// return the user-agent value from the header, empty string if not found
+std::string HttpRequest::getUserAgent() const
+{
+    std::multimap<std::string, std::string>::const_iterator it = headers_.find("user-agent");
+    if (it != headers_.end())
+        return it->second;
+    return "";
+}
+
+// return the content-type value from the header, empty string if not found
+std::string HttpRequest::getContentType() const
+{
+    std::multimap<std::string, std::string>::const_iterator it = headers_.find("content-type");
+    if (it != headers_.end())
+        return it->second;
+    return "";
+}
+
+// return specific header value, empty string if not found
+std::string HttpRequest::getHeader(const std::string& header_name) const
+{
+    std::string lower_name = header_name;
+    std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ::tolower);
+    std::multimap<std::string, std::string>::const_iterator it = headers_.find(lower_name);
     if (it != headers_.end())
         return it->second;
     return "";
