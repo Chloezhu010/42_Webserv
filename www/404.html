@@ -5,39 +5,202 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page non trouvée</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .error-container {
-            max-width: 500px;
-            margin: 0 auto;
+
+        .container {
+            max-width: 600px;
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            text-align: center;
         }
-        h1 { color: #dc3545; font-size: 4em; margin: 0; }
-        h2 { color: #333; margin: 20px 0; }
-        p { color: #666; margin: 20px 0; }
-        a { color: #007bff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+
+        .error-header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 40px 30px;
+        }
+
+        .error-code {
+            font-size: 8em;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin: 0;
+            line-height: 1;
+        }
+
+        .error-message {
+            font-size: 1.8em;
+            margin-top: 15px;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .content p {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .reasons {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .reasons h3 {
+            color: #dc3545;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .reasons ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        .reasons ul li {
+            padding: 8px 0;
+            color: #666;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .reasons ul li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .illustration {
+            font-size: 5em;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        footer p {
+            color: white;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <h1>404</h1>
-        <h2>Page non trouvée</h2>
-        <p>Désolé, la page que vous cherchez n'existe pas.</p>
-        <p>Causes possibles :</p>
-        <ul style="text-align: left; color: #666;">
-            <li>Adresse URL incorrecte</li>
-            <li>Page supprimée ou déplacée</li>
-            <li>Problème de configuration du serveur</li>
-        </ul>
-        <p><a href="/">Retour à l'accueil</a></p>
+    <div class="container">
+        <div class="error-header">
+            <div class="error-code">404</div>
+            <div class="error-message">Page non trouvée</div>
+        </div>
+
+        <div class="content">
+            <div class="illustration">🔍</div>
+
+            <p>
+                <strong>Oups !</strong> La page que vous recherchez semble introuvable.
+            </p>
+
+            <div class="reasons">
+                <h3>Causes possibles :</h3>
+                <ul>
+                    <li>L'adresse URL est incorrecte ou mal saisie</li>
+                    <li>La page a été supprimée ou déplacée</li>
+                    <li>Le lien que vous avez suivi est obsolète</li>
+                    <li>Vous n'avez pas les permissions nécessaires</li>
+                </ul>
+            </div>
+
+            <div class="actions">
+                <a href="/" class="btn btn-primary">
+                    🏠 Retour à l'accueil
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    ← Page précédente
+                </a>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>42 Webserv</strong></p>
+            <p style="font-size: 0.9em; opacity: 0.8;">Erreur 404 - Ressource non trouvée</p>
+        </footer>
     </div>
 </body>
 </html>
