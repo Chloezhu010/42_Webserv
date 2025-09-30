@@ -67,12 +67,10 @@ private:
     void resetConnectionForResue(ClientConnection* conn);
     bool parseHttpRequest(ClientConnection* conn);
     void buildHttpResponse(ClientConnection* conn);
-    // void sendStaticFile(ClientConnection* conn, const std::string& filePath); // replaced by HttpResponse class
-    // void send404Response(ClientConnection* conn); // replaced by HttpResponse class
     void updateMaxFd();// 最大fd值
 
     // CGI处理方法
-    bool handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location);
+    // bool handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location);
     LocationConfig* findMatchingLocationForServer(const std::string& uri, ServerInstance* server);
     
     // 初始化辅助方法

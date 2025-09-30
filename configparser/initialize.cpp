@@ -888,9 +888,40 @@ static void handleRedirect(ClientConnection* conn)
     std::cout << "Redirecting to: " << redirect_url << " (" << status_code << ")" << std::endl;
 }
 
+/* helpder function for handleGETResponse & handlePostResponse: to support CGI
+    - execute CGI
+    - set conn->response buffer on success
+    - set 502 on failure
+    - return true/false
+*/
+static bool handleCGIExecution(ClientConnection* conn, const std::string scriptPath, CGIHandler& cgiHandler)
+{
+    // pre check
+    if (!conn->matched_location) {
+        conn->response_buffer = conn->http_response->buildErrorResponse(500, "Internal Server Error", *conn->http_request);
+        conn->response_ready = true;
+        return false;
+    }
+    // execute CGI
+    std::string response;
+    if (cgiHandler.execute(*conn->http_request, *conn->matched_location, scriptPath, response)) {
+        conn->response_buffer = response;
+        conn->response_ready = true;
+        std::cout << "✅ CGI request handled successfully" << std::endl;
+        return true;
+    }
+    // error handling
+    std::cerr << "❌ CGI execution failed: " << cgiHandler.getLastError() << std::endl;
+    conn->response_buffer = conn->http_response->buildErrorResponse(502, "Bad Gateway", *conn->http_request);
+    conn->response_ready = true;
+
+    return false;
+}
+
 /* helper function for buildHttpResponse： build the response for GET
     - Method not allowed -> 405
     - Redirect -> 3xx
+    - CGI request -> 502
     - Path is directory
         - index file exists -> 200 serve index file
         - no index file, autoindex on -> 200 generate dir listing
@@ -899,18 +930,17 @@ static void handleRedirect(ClientConnection* conn)
         - file exists -> 200 serve file
         - file not exists -> 404
 */
-static void handleGetResponse(ClientConnection* conn, std::string& uri)
+static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandler& cgiHandler)
 {
     /* check for method permission */
     if (!isMethodAllowed("GET", conn->matched_location))
     {
         conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
         return;
-    }
+    }    
     /* check for redirects */
     if (conn->matched_location && !conn->matched_location->redirect.empty())
     {
-        // std::cout << "🚧 DEBUG: redirect str " << conn->matched_location->redirect << std::endl;
         handleRedirect(conn);
         return;
     }
@@ -920,8 +950,14 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
     std::string root = conn->server_instance->getConfig().root;
     if (conn->matched_location && !conn->matched_location->root.empty())
         root = conn->matched_location->root; // location-specific root overrides server root
-    /* construct the full file path */
     std::string file_path = root + uri;
+    /* check for CGI request */
+    if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
+    {
+        std::cout << "🔧 GET: CGI request detected for URI: " << uri << std::endl;
+        handleCGIExecution(conn, file_path, cgiHandler);
+    }
+
     /* handle directory request
         - check if it's a directory request
         - if directory, check for index files
@@ -942,7 +978,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri)
     - Client body too large -> 413
     - Success -> 200
 */
-static void handlePostResponse(ClientConnection* conn, std::string& uri)
+static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHandler& cgiHandler)
 {
     /* check for method permission */
     if (!isMethodAllowed("POST", conn->matched_location)) {
@@ -953,9 +989,7 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
     std::string root = conn->server_instance->getConfig().root;
     if (conn->matched_location && !conn->matched_location->root.empty())
         root = conn->matched_location->root;
-    /* construct the full file path */
     std::string file_path = root + uri;
-
     /* client body size validation */
     size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
     size_t requestBodySize = conn->http_request->getBody().size();
@@ -963,16 +997,12 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
         conn->response_buffer = conn->http_response->buildErrorResponse(413, "Content Too Large", *conn->http_request);
         return;
     }
-
-    /* CGI support */
-    // detect CGI request based on location config
-
-    // set up environment variables
-
-    // execute the script with the configured interpreter
-
-    // capture stdout and return it as HTTP response
-
+    /* check for CGI request */
+    if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
+    {
+        std::cout << "🔧 GET: CGI request detected for URI: " << uri << std::endl;
+        handleCGIExecution(conn, file_path, cgiHandler);
+    }
     /* handle file upload */
     // detect if the request is multipart/form data
     if (conn->http_request->isMultipartFormData())
@@ -1063,7 +1093,7 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri)
         - Delete success -> 200
         - Delete fail -> 403
 */
-static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
+static void handleDeleteResponse(ClientConnection* conn, std::string& uri, CGIHandler& cgiHandler)
 {
     /* check for method permission */
     if (!isMethodAllowed("DELETE", conn->matched_location)) {
@@ -1076,12 +1106,17 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri)
         root = conn->matched_location->root;
     /* construct the full file path */
     std::string file_path = root + uri;
+    /* check for CGI request */
+    if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
+    {
+        std::cout << "🔧 GET: CGI request detected for URI: " << uri << std::endl;
+        handleCGIExecution(conn, file_path, cgiHandler);
+    }
     /* check if the path is a directory */
     struct stat file_stat;
     if (stat(file_path.c_str(), &file_stat) == 0 && S_ISDIR(file_stat.st_mode)) // is directory
     {
         conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
-        // handleDeleteDirRequest(conn, file_path);
         return;
     }
     /* check the file and try to delete */
@@ -1122,34 +1157,34 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
         std::string method = conn->http_request->getMethodStr();
         std::string uri = conn->http_request->getURI();
 
-        // 首先检查是否为CGI请求
-        std::string hostHeader = conn->http_request->getHost();
-        // 需要从Host header中提取端口信息来找到正确的服务器实例
-        int port = 8080; // 默认端口，实际应该从连接信息获取
-        ServerInstance* server = findServerByHost(hostHeader, port);
+        // // 首先检查是否为CGI请求
+        // std::string hostHeader = conn->http_request->getHost();
+        // // 需要从Host header中提取端口信息来找到正确的服务器实例
+        // int port = 8080; // 默认端口，实际应该从连接信息获取
+        // ServerInstance* server = findServerByHost(hostHeader, port);
 
-        if (server) {
-            LocationConfig* location = findMatchingLocationForServer(uri, server);
-            if (location && CGIHandler::isCGIRequest(uri, *location)) {
-                std::cout << "🔧 CGI request detected for URI: " << uri << std::endl;
-                if (handleCGIRequest(conn, uri, *location)) {
-                    return; // CGI处理成功，直接返回
-                }
-                // CGI处理失败，返回502错误
-                std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
-                conn->response_buffer = conn->http_response->buildErrorResponse(502, "Bad Gateway", *conn->http_request);
-                conn->response_ready = true;
-                return;
-            }
-        }
+        // if (server) {
+        //     LocationConfig* location = findMatchingLocationForServer(uri, server);
+        //     if (location && CGIHandler::isCGIRequest(uri, *location)) {
+        //         std::cout << "🔧 CGI request detected for URI: " << uri << std::endl;
+        //         if (handleCGIRequest(conn, uri, *location)) {
+        //             return; // CGI处理成功，直接返回
+        //         }
+        //         // CGI处理失败，返回502错误
+        //         std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
+        //         conn->response_buffer = conn->http_response->buildErrorResponse(502, "Bad Gateway", *conn->http_request);
+        //         conn->response_ready = true;
+        //         return;
+        //     }
+        // }
 
-        // 非CGI请求，使用原有的处理逻辑
+
         if (method == "GET")
-            handleGetResponse(conn, uri);
+            handleGetResponse(conn, uri, cgiHandler_);
         else if (method == "POST")
-            handlePostResponse(conn, uri);
+            handlePostResponse(conn, uri, cgiHandler_);
         else if (method == "DELETE")
-            handleDeleteResponse(conn, uri);
+            handleDeleteResponse(conn, uri, cgiHandler_);
     }
 }
 
@@ -1244,31 +1279,35 @@ void WebServer::updateMaxFd() {
 
 // =================== CGI Integration Methods ===================
 
-bool WebServer::handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location) {
-    std::cout << "🔧 Handling CGI request: " << uri << std::endl;
+// bool WebServer::handleCGIRequest(ClientConnection* conn, const std::string& uri, const LocationConfig& location) {
+//     std::cout << "🔧 Handling CGI request: " << uri << std::endl;
 
-    // 构建脚本的完整路径
-    std::string scriptPath = location.root + uri;
-    if (location.root.empty()) {
-        scriptPath = "./www" + uri; // 默认www目录
-    }
+//     // construct script path
+//     std::string root = conn->server_instance->getConfig().root;
+//     if (conn->matched_location && !conn->matched_location->root.empty())
+//         root = conn->matched_location->root;
+//     std::string scriptPath = root + uri;
+//     // std::string scriptPath = location.root + uri;
+//     // if (location.root.empty()) {
+//     //     scriptPath = "./www" + uri; // 默认www目录
+//     // }
 
-    std::cout << "📁 Script path: " << scriptPath << std::endl;
-    std::cout << "🛠️  CGI program: " << location.cgiPath << std::endl;
-    std::cout << "📝 Extension: " << location.cgiExtension << std::endl;
+//     std::cout << "📁 Script path: " << scriptPath << std::endl;
+//     std::cout << "🛠️  CGI program: " << location.cgiPath << std::endl;
+//     std::cout << "📝 Extension: " << location.cgiExtension << std::endl;
 
-    // 执行CGI
-    std::string response;
-    if (cgiHandler_.execute(*conn->http_request, location, scriptPath, response)) {
-        conn->response_buffer = response;
-        conn->response_ready = true;
-        std::cout << "✅ CGI request handled successfully" << std::endl;
-        return true;
-    }
+//     // execute CGI
+//     std::string response;
+//     if (cgiHandler_.execute(*conn->http_request, location, scriptPath, response)) {
+//         conn->response_buffer = response;
+//         conn->response_ready = true;
+//         std::cout << "✅ CGI request handled successfully" << std::endl;
+//         return true;
+//     }
 
-    std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
-    return false;
-}
+//     std::cerr << "❌ CGI execution failed: " << cgiHandler_.getLastError() << std::endl;
+//     return false;
+// }
 
 LocationConfig* WebServer::findMatchingLocationForServer(const std::string& uri, ServerInstance* server) {
     if (!server) {
