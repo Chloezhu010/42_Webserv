@@ -1201,14 +1201,6 @@ bool HttpRequest::getConnection() const
     return keep_alive_;
 }
 
-// return the content-type value from the header, empty string if not found
-std::string HttpRequest::getContentType() const {
-    std::multimap<std::string, std::string>::const_iterator it = headers_.find("content-type");
-    if (it != headers_.end())
-        return it->second;
-    return "";
-}
-
 // return the validation request result
 ValidationResult HttpRequest::getValidationStatus() const
 {
