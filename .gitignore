@@ -42,4 +42,12 @@
 
 .DS_Store
 .env
+
+# Build directory
+build/
+webserv
+
+# VSCode
+.vscode/
+
 CLAUDE.md
