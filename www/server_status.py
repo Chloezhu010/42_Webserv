@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-服务器状态动态信息 - 为主页面提供实时服务器数据
+Informations dynamiques sur l'état du serveur - Fournit des données en temps réel
 """
 
 import os
@@ -11,36 +11,50 @@ import json
 from datetime import datetime
 
 def get_system_info():
-    """获取系统信息"""
+    """Obtenir les informations système"""
     try:
         return {
             "os": platform.system(),
             "platform": platform.platform(),
             "python_version": platform.python_version(),
             "machine": platform.machine(),
-            "processor": platform.processor() or "Unknown"
+            "processor": platform.processor() or "Inconnu"
         }
     except:
-        return {"error": "无法获取系统信息"}
+        return {"error": "Impossible d'obtenir les informations système"}
 
 def get_server_stats():
-    """获取服务器运行统计"""
+    """Obtenir les statistiques du serveur"""
     current_time = datetime.now()
+
+    # Traduction des jours en français
+    days_fr = {
+        'Monday': 'Lundi',
+        'Tuesday': 'Mardi',
+        'Wednesday': 'Mercredi',
+        'Thursday': 'Jeudi',
+        'Friday': 'Vendredi',
+        'Saturday': 'Samedi',
+        'Sunday': 'Dimanche'
+    }
+
+    day_en = current_time.strftime("%A")
+    day_fr = days_fr.get(day_en, day_en)
 
     return {
         "current_time": current_time.strftime("%Y-%m-%d %H:%M:%S"),
         "timestamp": int(time.time()),
-        "day_of_week": current_time.strftime("%A"),
+        "day_of_week": day_fr,
         "timezone": time.tzname[0] if time.tzname else "UTC",
-        "server_software": "webserv/1.0 (42 Project)",
+        "server_software": "webserv/1.0 (Projet 42)",
         "cgi_version": "CGI/1.1",
         "request_method": os.environ.get('REQUEST_METHOD', 'GET'),
         "remote_addr": os.environ.get('REMOTE_ADDR', '127.0.0.1'),
-        "user_agent": os.environ.get('HTTP_USER_AGENT', 'Unknown'),
+        "user_agent": os.environ.get('HTTP_USER_AGENT', 'Inconnu'),
     }
 
 def create_html_response():
-    """生成HTML响应"""
+    """Générer la réponse HTML"""
     system_info = get_system_info()
     server_stats = get_server_stats()
 
@@ -52,7 +66,10 @@ def create_html_response():
                 <strong>Heure actuelle:</strong> {server_stats['current_time']}
             </div>
             <div class="status-item">
-                <strong>Système:</strong> {system_info.get('os', 'Unknown')} ({system_info.get('machine', 'Unknown')})
+                <strong>Jour:</strong> {server_stats['day_of_week']}
+            </div>
+            <div class="status-item">
+                <strong>Système:</strong> {system_info.get('os', 'Inconnu')} ({system_info.get('machine', 'Inconnu')})
             </div>
             <div class="status-item">
                 <strong>Version CGI:</strong> {server_stats['cgi_version']}
@@ -103,7 +120,7 @@ def create_html_response():
 
     return html
 
-# CGI响应
-print("Content-Type: text/html")
+# Réponse CGI
+print("Content-Type: text/html; charset=UTF-8")
 print("")
 print(create_html_response())

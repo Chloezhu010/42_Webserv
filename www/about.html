@@ -3,53 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>À propos - Mon webserv</title>
+    <title>À propos - 42 Webserv</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
-            background-color: #f5f5f5;
         }
+
         .container {
+            max-width: 1000px;
+            margin: 0 auto;
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
-        h1 { color: #333; text-align: center; }
-        .back { text-align: center; margin: 20px 0; }
-        .back a { color: #007bff; text-decoration: none; }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav a {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            border: 2px solid #667eea;
+            font-weight: 500;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 25px 0 15px 0;
+        }
+
+        .section p {
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .tech-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tech-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            transition: transform 0.2s;
+        }
+
+        .feature-list li:hover {
+            transform: translateX(10px);
+            background: #e9ecef;
+        }
+
+        .feature-list li::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e7f3ff 0%, #f0e7ff 100%);
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            margin: 30px 0;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .authors {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .author-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .author-card h4 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 0;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>À propos de ce projet</h1>
-        
-        <div class="back">
-            <a href="/">← Retour à l'accueil</a>
+        <header>
+            <h1>ℹ️ À propos</h1>
+            <p>Tout savoir sur le projet 42 Webserv</p>
+        </header>
+
+        <nav class="nav">
+            <a href="/">🏠 Accueil</a>
+            <a href="/about.html" class="active">ℹ️ À propos</a>
+            <a href="/upload.html">📤 Upload</a>
+            <a href="/cgi-bin/test.py">🐍 CGI Test</a>
+            <a href="/server_status.py">📊 Status</a>
+        </nav>
+
+        <div class="content">
+            <!-- Présentation -->
+            <div class="section">
+                <h2>📖 Présentation du projet</h2>
+                <p>
+                    <strong>42 Webserv</strong> est un projet ambitieux de l'École 42 dont l'objectif est de créer
+                    un serveur HTTP entièrement fonctionnel en <strong>C++98</strong>, sans utiliser de bibliothèques externes.
+                </p>
+                <p>
+                    Ce projet nous permet de comprendre en profondeur le fonctionnement du protocole HTTP,
+                    la gestion des connexions réseau, et l'architecture des serveurs web modernes comme Nginx ou Apache.
+                </p>
+            </div>
+
+            <!-- Stack Technique -->
+            <div class="section">
+                <h2>🔧 Stack Technique</h2>
+                <div class="tech-grid">
+                    <div class="tech-item">
+                        <strong>Langage</strong>
+                        <span>C++98</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>Protocole</strong>
+                        <span>HTTP/1.1</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>I/O Multiplexing</strong>
+                        <span>select()</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>Architecture</strong>
+                        <span>Event-driven</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>CGI</strong>
+                        <span>Python, Shell, PHP</span>
+                    </div>
+                    <div class="tech-item">
+                        <strong>Config</strong>
+                        <span>Nginx-style</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fonctionnalités -->
+            <div class="section">
+                <h2>✨ Fonctionnalités implémentées</h2>
+
+                <h3>Gestion HTTP</h3>
+                <ul class="feature-list">
+                    <li>Support complet HTTP/1.1</li>
+                    <li>Méthodes GET, POST, DELETE</li>
+                    <li>Keep-Alive et connexions persistantes</li>
+                    <li>Transfer-Encoding: chunked</li>
+                    <li>Content-Length validation</li>
+                    <li>Headers parsing robuste</li>
+                </ul>
+
+                <h3>Serveur de fichiers</h3>
+                <ul class="feature-list">
+                    <li>Service de fichiers statiques (HTML, CSS, JS, images)</li>
+                    <li>Upload de fichiers multipart/form-data</li>
+                    <li>Autoindex (listage de répertoires)</li>
+                    <li>MIME types automatiques</li>
+                    <li>Cache-Control headers</li>
+                </ul>
+
+                <h3>CGI (Common Gateway Interface)</h3>
+                <ul class="feature-list">
+                    <li>Exécution de scripts Python, Shell, PHP</li>
+                    <li>Variables d'environnement CGI standards</li>
+                    <li>Gestion GET & POST data</li>
+                    <li>Timeout et error handling</li>
+                    <li>Pipes pour communication bi-directionnelle</li>
+                </ul>
+
+                <h3>Configuration</h3>
+                <ul class="feature-list">
+                    <li>Multi-serveurs sur différents ports</li>
+                    <li>Virtual hosts (server_name)</li>
+                    <li>Locations avec règles de routing</li>
+                    <li>Redirections (301, 302)</li>
+                    <li>Pages d'erreur personnalisées</li>
+                    <li>Client max body size</li>
+                </ul>
+            </div>
+
+            <!-- Architecture -->
+            <div class="info-box">
+                <h3>🏗️ Architecture technique</h3>
+                <p>
+                    Le serveur utilise une architecture <strong>event-driven</strong> avec <strong>select()</strong>
+                    pour gérer plusieurs connexions simultanées de manière non-bloquante. Chaque connexion client
+                    est traitée dans une machine à états qui gère :
+                </p>
+                <ul style="list-style: none; margin-top: 15px;">
+                    <li>📥 <strong>Réception</strong> : Lecture des requêtes HTTP</li>
+                    <li>🔍 <strong>Parsing</strong> : Analyse et validation HTTP</li>
+                    <li>⚙️ <strong>Traitement</strong> : Routing, CGI, fichiers statiques</li>
+                    <li>📤 <strong>Réponse</strong> : Envoi des données au client</li>
+                </ul>
+            </div>
+
+            <!-- Défis techniques -->
+            <div class="section">
+                <h2>🎯 Défis techniques relevés</h2>
+                <ul class="feature-list">
+                    <li>Parsing HTTP robuste avec gestion des cas limites</li>
+                    <li>Non-blocking I/O avec select() (pas d'epoll)</li>
+                    <li>Gestion correcte du Transfer-Encoding: chunked</li>
+                    <li>Upload de fichiers multipart avec boundary parsing</li>
+                    <li>Exécution CGI avec fork/exec et pipes</li>
+                    <li>Timeout management et zombie process cleanup</li>
+                    <li>Memory leak prevention (Valgrind clean)</li>
+                    <li>Configuration parser style Nginx</li>
+                </ul>
+            </div>
+
+            <!-- Auteurs -->
+            <div class="section">
+                <h2>👥 Auteurs</h2>
+                <div class="authors">
+                    <div class="author-card">
+                        <h4>🎓 Étudiant 42</h4>
+                        <p>Développeur principal</p>
+                        <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                            École 42 Paris
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/" class="back-btn">← Retour à l'accueil</a>
+            </div>
         </div>
-        
-        <h3>Présentation du projet</h3>
-        <p>Il s'agit du projet webserv de l'école 42, dont l'objectif est d'implémenter un serveur HTTP entièrement fonctionnel.</p>
-        
-        <h3>Stack technique</h3>
-        <ul>
-            <li><strong>Langage :</strong> C++98</li>
-            <li><strong>Protocole :</strong> HTTP/1.1</li>
-            <li><strong>Modèle I/O :</strong> select/epoll</li>
-            <li><strong>Architecture :</strong> Piloté par événements</li>
-        </ul>
-        
-        <h3>Fonctionnalités implémentées</h3>
-        <ul>
-            <li>✅ Serveur TCP</li>
-            <li>✅ Analyse du protocole HTTP</li>
-            <li>✅ Service de fichiers statiques</li>
-            <li>🔄 Support CGI (en développement)</li>
-            <li>🔄 Traitement des requêtes POST (en développement)</li>
-        </ul>
+
+        <footer>
+            <p><strong>42 Webserv Project</strong></p>
+            <p>Développé avec ❤️ pour École 42</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                Un serveur web complet écrit from scratch en C++
+            </p>
+        </footer>
     </div>
 </body>
 </html>
