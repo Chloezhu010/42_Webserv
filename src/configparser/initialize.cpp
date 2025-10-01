@@ -979,7 +979,7 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
 {
     /* check for method permission */
     if (!isMethodAllowed("POST", conn->matched_location)) {
-        conn->request_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
+        conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
         return;
     }
     /* determine root path */
@@ -1077,9 +1077,9 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
         conn->http_response->setHeader("Content-Type", "text/html");
     }
     
-    
     // update the response_buffer
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
+    conn->response_ready = true;
 }
 
 
@@ -1243,15 +1243,3 @@ void WebServer::updateMaxFd() {
         }
     }
 }
-
-// =================== CGI Integration Methods ===================
-
-
-// LocationConfig* WebServer::findMatchingLocationForServer(const std::string& uri, ServerInstance* server) {
-//     if (!server) {
-//         return NULL;
-//     }
-
-//     // 使用ServerInstance的现有方法来查找匹配的location
-//     return server->findMatchingLocation(uri);
-// }

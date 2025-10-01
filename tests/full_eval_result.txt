@@ -1,0 +1,271 @@
+[0;34m
+╔════════════════════════════════════════════════════════╗
+║     WEBSERV EVALUATION TEST SUITE                     ║
+║     Based on 42 Evaluation Criteria                   ║
+╚════════════════════════════════════════════════════════╝
+[0m
+[0;34mℹ INFO[0m - Starting webserv server...
+[0;34mℹ INFO[0m - Server already running on port 8080
+
+[0;34m========================================[0m
+[0;34mBASIC CHECKS - GET REQUESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 1][0m GET / should return 200 OK
+[0;32m✓ PASS[0m - Status code 200
+[1;33m[TEST 2][0m GET /index.html should return 200 OK
+[0;32m✓ PASS[0m - Status code 200
+[1;33m[TEST 3][0m GET /nonexistent.html should return 404
+[0;32m✓ PASS[0m - Status code 404
+[1;33m[TEST 4][0m GET with query string should return 200
+[0;32m✓ PASS[0m - Status code 200
+
+[0;34m========================================[0m
+[0;34mBASIC CHECKS - POST REQUESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 5][0m POST with body should work
+[0;31m✗ FAIL[0m - Expected status code 200|201
+  Got: HTTP/1.1 200 OK
+[1;33m[TEST 6][0m POST without Content-Length should return 411
+[0;32m✓ PASS[0m - Status code 411
+[1;33m[TEST 7][0m POST with Content-Length should work
+[0;31m✗ FAIL[0m - Expected status code 200|201
+  Got: HTTP/1.1 200 OK
+[1;33m[TEST 8][0m POST exceeding body limit should return 413
+[0;31m✗ FAIL[0m - Expected status code 413
+  Got: 
+
+[0;34m========================================[0m
+[0;34mBASIC CHECKS - DELETE REQUESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 9][0m DELETE existing file should return 200
+[0;31m✗ FAIL[0m - Expected status code 200
+  Got: HTTP/1.1 404 Not Found
+[1;33m[TEST 10][0m DELETE non-existent file should return 404
+[0;32m✓ PASS[0m - Status code 404
+[1;33m[TEST 11][0m DELETE directory should return 403
+[0;32m✓ PASS[0m - Status code 403
+
+[0;34m========================================[0m
+[0;34mBASIC CHECKS - UNKNOWN/UNSUPPORTED METHODS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 12][0m PATCH should return 405 Method Not Allowed
+[0;32m✓ PASS[0m - Status code 405
+[1;33m[TEST 13][0m PUT should return 405 Method Not Allowed
+[0;32m✓ PASS[0m - Status code 405
+[1;33m[TEST 14][0m OPTIONS should return 405 or 501
+[0;31m✗ FAIL[0m - Expected status code 405|501
+  Got: HTTP/1.1 405 Method Not Allowed
+[1;33m[TEST 15][0m Invalid method should return 400 or 405
+[0;31m✗ FAIL[0m - Expected status code 400|405
+  Got: HTTP/1.1 405 Method Not Allowed
+[1;33m[TEST 16][0m Malformed request should not crash server
+[0;32m✓ PASS[0m - Server still running after malformed request
+
+[0;34m========================================[0m
+[0;34mBASIC CHECKS - FILE UPLOAD[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 17][0m File upload should return 200 or 201
+[0;31m✗ FAIL[0m - Expected status code 200|201
+  Got: HTTP/1.1 201 Created
+
+[0;34m========================================[0m
+[0;34mCONFIGURATION TESTS[0m
+[0;34m========================================[0m
+
+[0;34mℹ INFO[0m - Multiple ports test requires manual config verification
+[1;33m[TEST 18][0m Virtual host routing should work
+[0;32m✓ PASS[0m - Virtual host routing should work
+[1;33m[TEST 19][0m Custom 404 error page
+[0;32m✓ PASS[0m - Status code 404
+[0;34mℹ INFO[0m - Body size limit tested in POST tests (413 status)
+[1;33m[TEST 20][0m Root route should work
+[0;32m✓ PASS[0m - Root route should work
+[1;33m[TEST 21][0m Directory should serve index file
+[0;32m✓ PASS[0m - Directory should serve index file
+
+[0;34m========================================[0m
+[0;34mBROWSER COMPATIBILITY TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 22][0m Serve static HTML
+[0;32m✓ PASS[0m - Status code 200
+[1;33m[TEST 23][0m HTML content served
+[0;32m✓ PASS[0m - HTML content served
+[1;33m[TEST 24][0m Wrong URL returns 404
+[0;32m✓ PASS[0m - Status code 404
+[1;33m[TEST 25][0m Directory listing or index
+[0;31m✗ FAIL[0m - Directory listing or index
+  Expected: HTTP/1.1 200|403
+  Got: HTTP/1.1 200 OK
+[1;33m[TEST 26][0m Redirect should work
+[0;31m✗ FAIL[0m - Redirect should work
+  Expected: HTTP/1.1 301|302|307
+  Got: HTTP/1.1 404 Not Found
+[1;33m[TEST 27][0m Response should have Server header
+[0;32m✓ PASS[0m - Response should have Server header
+[1;33m[TEST 28][0m Response should have Date header
+[0;32m✓ PASS[0m - Response should have Date header
+[1;33m[TEST 29][0m Response should have Content-Type
+[0;32m✓ PASS[0m - Response should have Content-Type
+
+[0;34m========================================[0m
+[0;34mHTTP/1.1 PROTOCOL TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 30][0m HTTP/1.0 should be handled
+[0;32m✓ PASS[0m - HTTP/1.0 should be handled
+[1;33m[TEST 31][0m HTTP/1.1 should be handled
+[0;32m✓ PASS[0m - HTTP/1.1 should be handled
+[1;33m[TEST 32][0m HTTP/2.0 should return 505
+[0;31m✗ FAIL[0m - Expected status code 505
+  Got: HTTP/1.1 400 Bad Request
+[1;33m[TEST 33][0m Missing Host header should return 400
+[0;32m✓ PASS[0m - Status code 400
+[1;33m[TEST 34][0m Keep-Alive connection test
+[0;32m✓ PASS[0m - Keep-Alive allows multiple requests
+[1;33m[TEST 35][0m Connection close header respected
+[0;31m✗ FAIL[0m - Connection close header respected
+  Expected: Connection: close|HTTP/1.1 200
+  Got: HTTP/1.1 200 OK
+
+[0;34m========================================[0m
+[0;34mURI VALIDATION TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 36][0m URI too long should return 414
+[0;32m✓ PASS[0m - Status code 414
+[1;33m[TEST 37][0m Path traversal should return 400
+[0;31m✗ FAIL[0m - Expected status code 400
+  Got: HTTP/1.1 404 Not Found
+[1;33m[TEST 38][0m Encoded path traversal should return 400
+[0;32m✓ PASS[0m - Status code 400
+[1;33m[TEST 39][0m Percent-encoded URI should work
+[0;32m✓ PASS[0m - Percent-encoded URI should work
+[1;33m[TEST 40][0m Query string should work
+[0;32m✓ PASS[0m - Status code 200
+
+[0;34m========================================[0m
+[0;34mHEADER VALIDATION TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 41][0m Too many headers should return 431
+[0;32m✓ PASS[0m - Too many headers returns 431
+[1;33m[TEST 42][0m Header too long should return 431
+[0;32m✓ PASS[0m - Status code 431
+[1;33m[TEST 43][0m Multiple Content-Length should return 400
+[0;31m✗ FAIL[0m - Expected status code 400
+  Got: 
+[1;33m[TEST 44][0m Invalid Content-Length should return 400
+[0;32m✓ PASS[0m - Status code 400
+
+[0;34m========================================[0m
+[0;34mCHUNKED TRANSFER ENCODING TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 45][0m Valid chunked POST request
+[0;32m✓ PASS[0m - Chunked encoding handled correctly
+[1;33m[TEST 46][0m TE + CL conflict should return 400
+[0;31m✗ FAIL[0m - Expected status code 400
+  Got: 
+
+[0;34m========================================[0m
+[0;34mCGI TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 47][0m Python CGI should return 200
+[0;31m✗ FAIL[0m - Expected status code 200
+  Got: HTTP/1.1 502 Bad Gateway
+[1;33m[TEST 48][0m CGI should output content
+[0;31m✗ FAIL[0m - CGI should output content
+  Expected: Content-Type:|text/
+  Got: HTTP/1.1 502 Bad Gateway
+[1;33m[TEST 49][0m CGI POST should return 200
+[0;32m✓ PASS[0m - Status code 200
+[0;34mℹ INFO[0m - CGI timeout test requires long-running script
+[1;33m[TEST 50][0m CGI with query string should return 200
+[0;31m✗ FAIL[0m - Expected status code 200
+  Got: HTTP/1.1 502 Bad Gateway
+
+[0;34m========================================[0m
+[0;34mMALFORMED REQUEST TESTS (NO CRASH)[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 51][0m Incomplete request line should return 400
+[0;31m✗ FAIL[0m - Expected status code 400
+  Got: 
+[1;33m[TEST 52][0m Missing HTTP version should return 400
+[0;32m✓ PASS[0m - Status code 400
+[1;33m[TEST 53][0m Invalid method characters
+[0;31m✗ FAIL[0m - Invalid method characters
+  Expected: 400|405
+  Got: HTTP/1.1 405 Method Not Allowed
+[1;33m[TEST 54][0m Request line too long
+[0;31m✗ FAIL[0m - Request line too long
+  Expected: 400|414
+  Got: HTTP/1.1 405 Method Not Allowed
+[1;33m[TEST 55][0m Binary garbage should not crash server
+[0;32m✓ PASS[0m - Server survived binary garbage
+[1;33m[TEST 56][0m Null bytes should not crash server
+[0;32m✓ PASS[0m - Server survived null bytes
+
+[0;34m========================================[0m
+[0;34mEDGE CASE TESTS[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 57][0m Empty request handling
+[0;31m✗ FAIL[0m - Server hung on empty request
+[1;33m[TEST 58][0m POST with Content-Length: 0 should work
+[0;31m✗ FAIL[0m - Expected status code 200|201
+  Got: HTTP/1.1 200 OK
+[1;33m[TEST 59][0m Slow request timeout test
+[0;32m✓ PASS[0m - Server handled slow request (timeout or completed)
+[1;33m[TEST 60][0m HTTP pipelining test
+[0;34mℹ INFO[0m - HTTP pipelining may not be implemented (optional)
+
+[0;34m========================================[0m
+[0;34mCONCURRENT CONNECTIONS TEST[0m
+[0;34m========================================[0m
+
+[1;33m[TEST 61][0m Handle 50 concurrent connections
+[0;32m✓ PASS[0m - Server handles concurrent connections
+
+[0;34m========================================[0m
+[0;34mMEMORY LEAK CHECK[0m
+[0;34m========================================[0m
+
+[0;34mℹ INFO[0m - Memory leak testing requires valgrind or leaks tool
+[0;34mℹ INFO[0m - Manual check: Run 'leaks webserv' or 'valgrind ./webserv'
+[1;33m[TEST 62][0m Memory stability test (1000 requests)
+[0;31m✗ FAIL[0m - Server unstable after many requests
+
+[0;34m========================================[0m
+[0;34mSIEGE STRESS TEST[0m
+[0;34m========================================[0m
+
+[0;34mℹ INFO[0m - Siege not installed. Install with: brew install siege
+
+[0;34m========================================[0m
+[0;34mPORT CONFIGURATION TESTS[0m
+[0;34m========================================[0m
+
+[0;34mℹ INFO[0m - Multiple port test requires config with multiple ports
+[0;34mℹ INFO[0m - Example: server { listen 8080; } server { listen 8081; }
+[0;34mℹ INFO[0m - Duplicate port test requires manual config verification
+[0;34mℹ INFO[0m - Config with duplicate ports should fail to start
+[0;34mℹ INFO[0m - Common port test requires manual config verification
+
+[0;34m========================================[0m
+[0;34mTEST SUMMARY[0m
+[0;34m========================================[0m
+Total Tests:  [1;33m62[0m
+Passed:       [0;32m38[0m
+Failed:       [0;31m23[0m
+
+[0;31m✗ SOME TESTS FAILED[0m
+[1;33mReview the failures above before evaluation[0m
+
