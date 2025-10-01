@@ -935,8 +935,8 @@ ValidationResult HttpRequest::validateRequestLine() const
     if (uri_result != VALID_REQUEST)
         return uri_result;
     // validate HTTP version
-    if (http_version_ != "HTTP/1.1")
-        return INVALID_HTTP_VERSION;
+    if (http_version_ != "HTTP/1.1" && http_version_ != "HTTP/1.0")
+        return HTTP_VERSION_NOT_SUPPORT;
     return VALID_REQUEST;
 }
 
@@ -1063,18 +1063,18 @@ ValidationResult HttpRequest::validateHeader() const
 ValidationResult HttpRequest::validateBody() const
 {
 // valid payload limit
-    // check body size limit
-    if (body_.length() > MAX_BODY_SIZE)
-        return PAYLOAD_TOO_LARGE;
-    // check total size limit
-    size_t total_size = method_str_.length() + uri_.length()
-                        + http_version_.length() + body_.length();
-    for (std::multimap<std::string, std::string>::const_iterator it = headers_.begin();
-        it != headers_.end(); ++it) {
-            total_size += it->first.length() + it->second.length() + 4; // + ": " + "\r\n"
-        }
-    if (total_size > MAX_REQUEST_SIZE)
-        return PAYLOAD_TOO_LARGE;
+    // // check body size limit
+    // if (body_.length() > MAX_BODY_SIZE)
+    //     return PAYLOAD_TOO_LARGE;
+    // // check total size limit
+    // size_t total_size = method_str_.length() + uri_.length()
+    //                     + http_version_.length() + body_.length();
+    // for (std::multimap<std::string, std::string>::const_iterator it = headers_.begin();
+    //     it != headers_.end(); ++it) {
+    //         total_size += it->first.length() + it->second.length() + 4; // + ": " + "\r\n"
+    //     }
+    // if (total_size > MAX_REQUEST_SIZE)
+    //     return PAYLOAD_TOO_LARGE;
 // content-length vs actual body size
     if (content_length_ >= 0 && body_.length() != static_cast<size_t>(content_length_))
         return BAD_REQUEST; // content-length mismatch

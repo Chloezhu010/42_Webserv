@@ -71,6 +71,7 @@ void HttpResponse::resultToStatusCode(ValidationResult result)
         case BAD_GATEWAY: status_code_ = 502; break;
         case SERVICE_UNAVAILABLE: status_code_ = 503; break;
         case GATEWAY_TIMEOUT: status_code_ = 504; break;
+        case HTTP_VERSION_NOT_SUPPORT: status_code_ = 505; break;
         
         default: status_code_ = 500; break;
     }
@@ -110,6 +111,7 @@ std::string HttpResponse::getReasonPhrase() const
         case 502: return "Bad Gateway";
         case 503: return "Service Unavailable";
         case 504: return "Gateway Timeout";
+        case 505: return "HTTP Version Not Supported";
         
         default: return "Unknown Status";
     }

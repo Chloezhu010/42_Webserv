@@ -712,11 +712,12 @@ void WebServer::handleClientRequest(int clientFd) {
         conn->http_request = new HttpRequest();
     if (!conn->http_response)
         conn->http_response = new HttpResponse();
-
     
     // std::cout << "🚧 DEBUG: Current request_buffer: [" << conn->request_buffer << "]" << std::endl;
     // trim the request line if there is leading CRLF
     trimValidateRequestBuffer(conn->request_buffer);
+    if (conn->request_buffer.empty())
+        return;
 
     // check request completeness
     RequestStatus status = conn->http_request->isRequestComplete(conn->request_buffer);

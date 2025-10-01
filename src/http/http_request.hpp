@@ -54,6 +54,8 @@ enum ValidationResult {
     BAD_GATEWAY,            // 502 bad gateway - CGI errors
     SERVICE_UNAVAILABLE,    // 503 Service unavailable - temp overload
     GATEWAY_TIMEOUT,        // 504 gateway timeout - CGI timeout
+    HTTP_VERSION_NOT_SUPPORT, // 505 HTTP Version Not Supported
+
 
 };
 
@@ -70,11 +72,9 @@ struct FileUpload {
 };
 
 // constants (TBD)
-const size_t MAX_REQUEST_SIZE = 8*1024*1024;
 const size_t MAX_HEADER_SIZE = 8*1024;
-const size_t MAX_HEADER_COUNT = 100; 
+const size_t MAX_HEADER_COUNT = 100;
 const size_t MAX_URI_LENGTH = 2048;
-const size_t MAX_BODY_SIZE = 10*1024*1024;
 
 // ============================================================================
 // HTTP REQUEST CLASS                                                                                  
