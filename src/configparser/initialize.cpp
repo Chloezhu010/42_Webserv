@@ -1071,10 +1071,14 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
     }
     else // handle normal POST data
     {
-        // Simple version: set success state and body for response
         conn->http_response->setStatusCode(200);
-        conn->http_response->setBody("<h1>POST successful</h1>\r\n\r\n");
         conn->http_response->setHeader("Content-Type", "text/html");
+        std::ostringstream response_body;
+        response_body << "{";
+        response_body << "\n  \"status\": POST successful";
+        response_body << "\n  \"data\": \"" << conn->http_request->getBody() << "\"";
+        response_body << "\n}\r\n\r\n";
+        conn->http_response->setBody(response_body.str());
     }
     
     // update the response_buffer
