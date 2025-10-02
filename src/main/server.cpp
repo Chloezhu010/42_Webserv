@@ -12,7 +12,7 @@ void signalHandler(int signal) {
         std::cout << "正在优雅地关闭服务器..." << std::endl;
         g_server->stop();
     }
-    exit(0);
+    // 不要调用 exit(),让程序自然退出以触发析构函数
 }
 
 void setupSignalHandlers() {
