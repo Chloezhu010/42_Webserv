@@ -863,7 +863,8 @@ static void handleDirRequest(ClientConnection* conn, const std::string& file_pat
         return;
     }
     // no index file found, no autoindex enabled
-    conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
+    // conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
+    conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
 }
 
 /* helper function for handleGetResponse
@@ -965,13 +966,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandl
         handleRedirect(conn);
         return;
     }
-    /* determine root path 
-        - extract root from server config / location config
-    */
-    // std::string root = conn->server_instance->getConfig().root;
-    // if (conn->matched_location && !conn->matched_location->root.empty())
-    //     root = conn->matched_location->root; // location-specific root overrides server root
-    // std::string file_path = root + uri;
+    /* determine root path */
     std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
