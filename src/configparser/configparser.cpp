@@ -485,6 +485,12 @@ bool ConfigParser::parseLocationDirective(LocationConfig& location) {
             return false;
         }
         parseRoot(location.root, args);
+    } else if (directive == "alias") {
+        if (args.empty()) {
+            printError("alias directive requires one argument");
+            return false;
+        }
+        parseAlias(location.alias, args);
     } else if (directive == "index") {
         if (args.empty()) {
             printError("index指令至少需要一个参数");
@@ -631,6 +637,12 @@ void ConfigParser::parseServerName(ServerConfig& server, const std::vector<std::
 void ConfigParser::parseRoot(std::string& root, const std::vector<std::string>& args) {
     if (!args.empty()) {
         root = args[0];
+    }
+}
+
+void ConfigParser::parseAlias(std::string& alias, const std::vector<std::string>& args) {
+    if (!args.empty()) {
+        alias = args[0];
     }
 }
 

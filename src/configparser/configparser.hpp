@@ -71,6 +71,7 @@ private:
     void parseListen(ServerConfig& server, const std::vector<std::string>& args);
     void parseServerName(ServerConfig& server, const std::vector<std::string>& args);
     void parseRoot(std::string& root, const std::vector<std::string>& args);
+    void parseAlias(std::string& alias, const std::vector<std::string>& args);
     void parseIndex(std::vector<std::string>& index, const std::vector<std::string>& args);
     void parseClientMaxBodySize(ServerConfig& server, const std::vector<std::string>& args);
     void parseErrorPage(ServerConfig& server, const std::vector<std::string>& args);

@@ -807,6 +807,31 @@ static void generateDirListing(ClientConnection* conn, const std::string& dir_pa
     conn->response_buffer = conn->http_response->buildFullResponse(*conn->http_request);
 }
 
+/* helper function: construct file path with root/ alias logic 
+    @param conn: client connection with server & location context
+    @param uri: request URI
+    @return: full file system path
+*/
+static std::string buildFilePath(ClientConnection* conn, const std::string& uri)
+{
+    // if using alias: replace the requst URI with location path
+    if (conn->matched_location && !conn->matched_location->alias.empty())
+    {
+        std::string location_path = conn->matched_location->path; // eg. location /kapouet
+        std::string remaining_path = uri; // eg. location /kapouet/pouic/toto/pouet
+        // strip the location path prefix
+        if (uri.find(location_path) == 0)
+            remaining_path = uri.substr(location_path.length()); 
+        return (conn->matched_location->alias + remaining_path);
+    }
+    // using root: append full URI to root
+    std::string root = conn->server_instance->getConfig().root;
+    if (conn->matched_location && !conn->matched_location->root.empty()) {
+        root = conn->matched_location->root;
+    }
+    return root + uri;
+}
+
 /* helper function for handleGetResponse */
 static void handleDirRequest(ClientConnection* conn, const std::string& file_path, const std::string& uri)
 {
@@ -943,10 +968,11 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandl
     /* determine root path 
         - extract root from server config / location config
     */
-    std::string root = conn->server_instance->getConfig().root;
-    if (conn->matched_location && !conn->matched_location->root.empty())
-        root = conn->matched_location->root; // location-specific root overrides server root
-    std::string file_path = root + uri;
+    // std::string root = conn->server_instance->getConfig().root;
+    // if (conn->matched_location && !conn->matched_location->root.empty())
+    //     root = conn->matched_location->root; // location-specific root overrides server root
+    // std::string file_path = root + uri;
+    std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
@@ -985,10 +1011,11 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
         return;
     }
     /* determine root path */
-    std::string root = conn->server_instance->getConfig().root;
-    if (conn->matched_location && !conn->matched_location->root.empty())
-        root = conn->matched_location->root;
-    std::string file_path = root + uri;
+    // std::string root = conn->server_instance->getConfig().root;
+    // if (conn->matched_location && !conn->matched_location->root.empty())
+    //     root = conn->matched_location->root;
+    // std::string file_path = root + uri;
+    std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* client body size validation */
     size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
@@ -1107,11 +1134,12 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri, CGIHa
         return;
     }
     /* determine root path */
-    std::string root = conn->server_instance->getConfig().root;
-    if (conn->matched_location && !conn->matched_location->root.empty())
-        root = conn->matched_location->root;
-    /* construct the full file path */
-    std::string file_path = root + uri;
+    // std::string root = conn->server_instance->getConfig().root;
+    // if (conn->matched_location && !conn->matched_location->root.empty())
+    //     root = conn->matched_location->root;
+    // /* construct the full file path */
+    // std::string file_path = root + uri;
+    std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))

@@ -10,6 +10,7 @@
 struct LocationConfig {
     std::string path;                        // location路径
     std::string root;                        // 文档根目录
+    std::string alias;                       // Alias directory (strips location path)
     std::vector<std::string> index;          // 默认索引文件
     std::vector<std::string> allowMethods;   // 允许的HTTP方法
     bool autoindex;                          // 是否开启目录浏览
