@@ -552,23 +552,39 @@ void WebServer::run() {
              it != clientConnections.end();)
         {
             int clientFd = it->first;
-            ClientConnection* conn = it->second;
-            // bool deleted = false;
 
             // safe iteration: save next iterators before possible deletion
             std::map<int, ClientConnection*>::iterator next_it = it;
             ++next_it;
-            
+
             // if the client fd is readable, handle http request
             if (FD_ISSET(clientFd, &readFds)) {
                 handleClientRequest(clientFd);
             }
+
+            // check if connection still exists after handleClientRequest
+            it = clientConnections.find(clientFd);
+            if (it == clientConnections.end()) {
+                it = next_it;
+                continue;  // connection was closed, skip to next
+            }
+
             // if the client fd is writable, handle http response
             if (FD_ISSET(clientFd, &writeFds)) {
                 handleClientResponse(clientFd);
             }
 
+            // check if connection still exists after handleClientResponse
+            it = clientConnections.find(clientFd);
+            if (it == clientConnections.end()) {
+                it = next_it;
+                continue;  // connection was closed, skip to next
+            }
+
             /* connection lifecycle management */
+            // now it's safe to use conn pointer
+            ClientConnection* conn = it->second;
+
             // if the request response is ready, and completely sent, then close or reset the connection
             if (conn->response_ready && conn->bytes_sent >= conn->response_buffer.size()) {
                 // For HTTP/1.1, keep the connection alive by default unless "Connection: close"
@@ -580,10 +596,10 @@ void WebServer::run() {
                         keep_alive = false;
                     else
                         keep_alive = true;
-                } 
+                }
                 else if (conn->http_request && conn->http_request->getIsParsed())
                         keep_alive = conn->http_request->getConnection();
-                
+
                 if (!keep_alive)
                     closeClientConnection(clientFd); // close connection
                 else
