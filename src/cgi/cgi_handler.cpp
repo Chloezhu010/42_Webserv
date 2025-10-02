@@ -80,7 +80,7 @@ bool CGIHandler::isCGIRequest(const std::string& uri, const LocationConfig& loca
 
     // 检查location是否配置了CGI
     if (location.cgiExtension.empty() || location.cgiPath.empty()) {
-        std::cout << "🔍 CGI not configured for this location" << std::endl;
+        // std::cout << "🔍 CGI not configured for this location" << std::endl;
         return false;
     }
 
