@@ -16,13 +16,17 @@ struct LocationConfig {
     std::string cgiExtension;                // CGI扩展名
     std::string cgiPath;                     // CGI程序路径
     std::string redirect;                    // 重定向URL
-    
-    // 默认构造函数
-    LocationConfig() : autoindex(false) {}
-    
+    size_t clientMaxBodySize;                // 客户端最大请求体大小
+                                             // 0 = 不限制
+                                             // SIZE_MAX = 未设置(使用server级别)
+                                             // 其他值 = 具体限制
+
+    // 默认构造函数 (SIZE_MAX 表示未设置,使用server级别的配置)
+    LocationConfig() : autoindex(false), clientMaxBodySize(static_cast<size_t>(-1)) {}
+
     // 构造函数
-    LocationConfig(const std::string& locationPath) 
-        : path(locationPath), autoindex(false) {}
+    LocationConfig(const std::string& locationPath)
+        : path(locationPath), autoindex(false), clientMaxBodySize(static_cast<size_t>(-1)) {}
 };
 
 // Server配置结构体

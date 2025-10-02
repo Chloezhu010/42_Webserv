@@ -73,6 +73,7 @@ private:
     void parseRoot(std::string& root, const std::vector<std::string>& args);
     void parseIndex(std::vector<std::string>& index, const std::vector<std::string>& args);
     void parseClientMaxBodySize(ServerConfig& server, const std::vector<std::string>& args);
+    void parseClientMaxBodySize(LocationConfig& location, const std::vector<std::string>& args);
     void parseErrorPage(ServerConfig& server, const std::vector<std::string>& args);
     void parseAllowMethods(LocationConfig& location, const std::vector<std::string>& args);
     void parseAutoindex(LocationConfig& location, const std::vector<std::string>& args);

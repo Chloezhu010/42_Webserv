@@ -81,14 +81,27 @@ void displayLocationConfig(const LocationConfig& location, size_t indent) {
     // Autoindex设置
     printIndent(indent);
     std::cout << "├── Autoindex: " << (location.autoindex ? "ON" : "OFF") << std::endl;
-    
+
+    // Client Max Body Size
+    // 只在显式设置时显示 (不是 SIZE_MAX)
+    // SIZE_MAX 表示使用 server 级别的设置
+    if (location.clientMaxBodySize != static_cast<size_t>(-1)) {
+        printIndent(indent);
+        if (location.clientMaxBodySize == 0) {
+            std::cout << "├── Client Max Body Size: unlimited" << std::endl;
+        } else {
+            std::cout << "├── Client Max Body Size: " << location.clientMaxBodySize
+                      << " bytes (" << (location.clientMaxBodySize / 1024 / 1024) << " MB)" << std::endl;
+        }
+    }
+
     // CGI配置
     printIndent(indent);
     std::cout << "├── CGI Extension: \"" << location.cgiExtension << "\"" << std::endl;
-    
+
     printIndent(indent);
     std::cout << "├── CGI Path: \"" << location.cgiPath << "\"" << std::endl;
-    
+
     // 重定向设置
     printIndent(indent);
     std::cout << "└── Redirect: \"" << location.redirect << "\"" << std::endl;
@@ -124,13 +137,18 @@ void displayServerConfig(const ServerConfig& server, size_t serverIndex) {
     }
     
     // 客户端最大请求体大小
-    std::cout << "Client Max Body Size: " << server.clientMaxBodySize << " bytes";
-    if (server.clientMaxBodySize >= 1024 * 1024) {
-        std::cout << " (" << (server.clientMaxBodySize / (1024 * 1024)) << " MB)";
-    } else if (server.clientMaxBodySize >= 1024) {
-        std::cout << " (" << (server.clientMaxBodySize / 1024) << " KB)";
+    std::cout << "Client Max Body Size: ";
+    if (server.clientMaxBodySize == 0) {
+        std::cout << "unlimited" << std::endl;
+    } else {
+        std::cout << server.clientMaxBodySize << " bytes";
+        if (server.clientMaxBodySize >= 1024 * 1024) {
+            std::cout << " (" << (server.clientMaxBodySize / (1024 * 1024)) << " MB)";
+        } else if (server.clientMaxBodySize >= 1024) {
+            std::cout << " (" << (server.clientMaxBodySize / 1024) << " KB)";
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
     
     // 根目录
     std::cout << "Root Directory: \"" << server.root << "\"" << std::endl;

@@ -1005,11 +1005,23 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
         root = conn->matched_location->root;
     std::string file_path = root + uri;
     /* client body size validation */
+    // 获取有效的 client_max_body_size:
+    // 1. 如果 location 设置了(不是 SIZE_MAX),使用 location 的
+    // 2. 否则使用 server 的
+    // 3. 如果最终值为 0,表示不限制
     size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
-    size_t requestBodySize = conn->http_request->getBody().size();
-    if (requestBodySize > configMaxBodySize) {
-        conn->response_buffer = conn->http_response->buildErrorResponse(413, "Content Too Large", *conn->http_request);
-        return;
+    if (conn->matched_location &&
+        conn->matched_location->clientMaxBodySize != static_cast<size_t>(-1)) {
+        configMaxBodySize = conn->matched_location->clientMaxBodySize;
+    }
+
+    // 如果 configMaxBodySize 为 0,表示不限制请求体大小
+    if (configMaxBodySize > 0) {
+        size_t requestBodySize = conn->http_request->getBody().size();
+        if (requestBodySize > configMaxBodySize) {
+            conn->response_buffer = conn->http_response->buildErrorResponse(413, "Content Too Large", *conn->http_request);
+            return;
+        }
     }
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
