@@ -947,6 +947,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandl
     if (conn->matched_location && !conn->matched_location->root.empty())
         root = conn->matched_location->root; // location-specific root overrides server root
     std::string file_path = root + uri;
+    std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
     {
@@ -988,6 +989,7 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
     if (conn->matched_location && !conn->matched_location->root.empty())
         root = conn->matched_location->root;
     std::string file_path = root + uri;
+    std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* client body size validation */
     size_t configMaxBodySize = conn->server_instance->getConfig().clientMaxBodySize;
     size_t requestBodySize = conn->http_request->getBody().size();
@@ -1110,6 +1112,7 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri, CGIHa
         root = conn->matched_location->root;
     /* construct the full file path */
     std::string file_path = root + uri;
+    std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
     {
