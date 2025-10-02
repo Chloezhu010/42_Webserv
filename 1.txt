@@ -1,0 +1,230 @@
+42_Webserv git:(main) ./webserv config/default.conf
+🚀 启动WebServer...
+📁 配置文件: config/default.conf
+Initializing WebServer with config file: config/default.conf
+
+==================================================
+ WEBSERV CONFIGURATION DISPLAY
+==================================================
+Total servers configured: 2
+
+==================================================
+ SERVER #1 CONFIGURATION
+==================================================
+Listen Ports (1): 8080
+Server Names (2): 
+    [0] "localhost"
+    [1] "example.com"
+Client Max Body Size: 1048576 bytes (1 MB)
+Root Directory: "./www/html"
+Default Index Files (2): 
+    [0] "index.html"
+    [1] "index.htm"
+Custom Error Pages (2): 
+    404 -> "/404.html"
+    500 -> "502"
+
+--------------------------------------------------
+ LOCATIONS (7)
+--------------------------------------------------
+
+Location #1:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/"
+  ├── Root: "./www/html"
+  ├── Index files (1): 
+  │   [0] "index.html"
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ".py"
+  ├── CGI Path: "/usr/bin/python3"
+  └── Redirect: ""
+----------------------------------------
+
+Location #2:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/images/"
+  ├── Root: "./www"
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: ON
+  ├── CGI Extension: ""
+  ├── CGI Path: ""
+  └── Redirect: ""
+----------------------------------------
+
+Location #3:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/upload/"
+  ├── Root: "./www"
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: ON
+  ├── CGI Extension: ""
+  ├── CGI Path: ""
+  └── Redirect: ""
+----------------------------------------
+
+Location #4:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/python/"
+  ├── Root: "./www"
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ".py"
+  ├── CGI Path: "/usr/bin/python3"
+  └── Redirect: ""
+----------------------------------------
+
+Location #5:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/shell/"
+  ├── Root: "./www"
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ".sh"
+  ├── CGI Path: "/bin/bash"
+  └── Redirect: ""
+----------------------------------------
+
+Location #6:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/php/"
+  ├── Root: "./www"
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ".php"
+  ├── CGI Path: "/usr/bin/php-cgi"
+  └── Redirect: ""
+----------------------------------------
+
+Location #7:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/redirect/"
+  ├── Root: ""
+  ├── Index files (0): (none)
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ""
+  ├── CGI Path: ""
+  └── Redirect: "301 http://api.example.com"
+
+
+==================================================
+ SERVER #2 CONFIGURATION
+==================================================
+Listen Ports (1): 8081
+Server Names (1): 
+    [0] "api.example.com"
+Client Max Body Size: 1048576 bytes (1 MB)
+Root Directory: "./api"
+Default Index Files (0): (none)
+Custom Error Pages (0): (none - using default)
+
+--------------------------------------------------
+ LOCATIONS (1)
+--------------------------------------------------
+
+Location #1:
+  📍 LOCATION CONFIGURATION:
+  ├── Path: "/"
+  ├── Root: "./api"
+  ├── Index files (1): 
+  │   [0] "api.html"
+  ├── Allowed methods (0): (none - all allowed)
+  ├── Autoindex: OFF
+  ├── CGI Extension: ""
+  ├── CGI Path: ""
+  └── Redirect: ""
+==================================================
+ END OF CONFIGURATION
+==================================================
+
+Server 0 root directory: ./www/html
+Server 1 root directory: ./api
+Socket created and bound to port 8080
+Socket created and bound to port 8081
+
+========== Server Configuration ==========
+Total servers configured: 2
+
+Server 1:
+  Listen ports: 8080
+  Server names: localhost, example.com
+  Root directory: ./www/html
+  Max body size: 1048576 bytes
+  Locations configured: 7
+  Custom error pages: 2
+
+Server 2:
+  Listen ports: 8081
+  Server names: api.example.com
+  Root directory: ./api
+  Max body size: 1048576 bytes
+  Locations configured: 1
+==========================================
+
+✅ 服务器初始化成功
+Listening on port 8080
+Listening on port 8081
+WebServer started successfully!
+🌟 WebServer正在运行!
+按Ctrl+C停止服务器
+Starting main event loop...
+New connection accepted: fd=5
+✍️ Parsed request: GET / HTTP/1.1 
+Sent 9081 bytes to fd=5
+Connection reset for reuse: fd=5
+✍️ Parsed request: GET /visitor_counter.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /visitor_counter.py
+❌ CGI Error: Script file not accessible: ./www/html/visitor_counter.py
+❌ CGI execution failed: Script file not accessible: ./www/html/visitor_counter.py
+Sent 1251 bytes to fd=5
+Connection closed: fd=5
+New connection accepted: fd=5
+✍️ Parsed request: GET /server_status.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /server_status.py
+❌ CGI Error: Script file not accessible: ./www/html/server_status.py
+❌ CGI execution failed: Script file not accessible: ./www/html/server_status.py
+Sent 1251 bytes to fd=5
+Connection closed: fd=5
+New connection accepted: fd=5
+✍️ Parsed request: GET / HTTP/1.1 
+Sent 9081 bytes to fd=5
+Connection reset for reuse: fd=5
+✍️ Parsed request: GET /visitor_counter.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /visitor_counter.py
+❌ CGI Error: Script file not accessible: ./www/html/visitor_counter.py
+❌ CGI execution failed: Script file not accessible: ./www/html/visitor_counter.py
+Sent 1251 bytes to fd=5
+Connection closed: fd=5
+New connection accepted: fd=5
+✍️ Parsed request: GET /server_status.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /server_status.py
+❌ CGI Error: Script file not accessible: ./www/html/server_status.py
+❌ CGI execution failed: Script file not accessible: ./www/html/server_status.py
+Sent 1251 bytes to fd=5
+Connection closed: fd=5
+New connection accepted: fd=5
+✍️ Parsed request: GET / HTTP/1.1 
+Sent 9081 bytes to fd=5
+Connection reset for reuse: fd=5
+✍️ Parsed request: GET /visitor_counter.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /visitor_counter.py
+❌ CGI Error: Script file not accessible: ./www/html/visitor_counter.py
+❌ CGI execution failed: Script file not accessible: ./www/html/visitor_counter.py
+New connection accepted: fd=6
+Sent 1251 bytes to fd=5
+Connection closed: fd=5
+✍️ Parsed request: GET /server_status.py HTTP/1.1 
+🔧 GET: CGI request detected for URI: /server_status.py
+❌ CGI Error: Script file not accessible: ./www/html/server_status.py
+❌ CGI execution failed: Script file not accessible: ./www/html/server_status.py
+Sent 1251 bytes to fd=6
+Connection closed: fd=6
+New connection accepted: fd=5
+Client disconnected: fd=5
+Connection closed: fd=5
