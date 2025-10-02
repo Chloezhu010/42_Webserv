@@ -73,10 +73,10 @@ bool CGIHandler::execute(const HttpRequest& request,
 }
 
 bool CGIHandler::isCGIRequest(const std::string& uri, const LocationConfig& location) {
-    std::cout << "🔍 Checking CGI for URI: " << uri << std::endl;
-    std::cout << "🔍 Location path: " << location.path << std::endl;
-    std::cout << "🔍 CGI Extension: '" << location.cgiExtension << "'" << std::endl;
-    std::cout << "🔍 CGI Path: '" << location.cgiPath << "'" << std::endl;
+    // std::cout << "🔍 Checking CGI for URI: " << uri << std::endl;
+    // std::cout << "🔍 Location path: " << location.path << std::endl;
+    // std::cout << "🔍 CGI Extension: '" << location.cgiExtension << "'" << std::endl;
+    // std::cout << "🔍 CGI Path: '" << location.cgiPath << "'" << std::endl;
 
     // 检查location是否配置了CGI
     if (location.cgiExtension.empty() || location.cgiPath.empty()) {
@@ -86,9 +86,9 @@ bool CGIHandler::isCGIRequest(const std::string& uri, const LocationConfig& loca
 
     // 检查URI是否匹配CGI扩展名
     std::string extension = getFileExtension(uri);
-    std::cout << "🔍 File extension: '" << extension << "'" << std::endl;
+    // std::cout << "🔍 File extension: '" << extension << "'" << std::endl;
     bool matches = (extension == location.cgiExtension);
-    std::cout << "🔍 Extension matches: " << (matches ? "YES" : "NO") << std::endl;
+    // std::cout << "🔍 Extension matches: " << (matches ? "YES" : "NO") << std::endl;
     return matches;
 }
 

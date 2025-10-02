@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sys/types.h>
+#include <stdlib.h>
 
 /**
  * @brief CGI进程管理器

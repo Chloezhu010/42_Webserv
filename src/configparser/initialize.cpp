@@ -787,7 +787,7 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
         return false;
     }
 
-    std::cout << "Parsed request: "
+    std::cout << "✍️ Parsed request: "
                 << conn->http_request->getMethodStr() << " "
                 << conn->http_request->getURI() << " "
                 << conn->http_request->getHttpVersion() << " " << std::endl;
