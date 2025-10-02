@@ -1168,6 +1168,9 @@ void WebServer::buildHttpResponse(ClientConnection* conn) {
             handlePostResponse(conn, uri, cgiHandler_);
         else if (method == "DELETE")
             handleDeleteResponse(conn, uri, cgiHandler_);
+        else {
+            conn->response_buffer = conn->http_response->buildErrorResponse(405, "Method Not Allowed", *conn->http_request);
+        }
     }
 }
 
