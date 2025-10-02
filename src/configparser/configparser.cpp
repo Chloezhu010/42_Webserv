@@ -345,24 +345,40 @@ bool ConfigParser::parseListenWithValidation(ServerConfig& server, const std::ve
 }
 
 bool ConfigParser::parseErrorPageWithValidation(ServerConfig& server, const std::vector<std::string>& args) {
-    // 验证错误码
-    const std::string& errorCodeStr = args[0];
-    
-    // 检查错误码是否为数字
-    for (size_t i = 0; i < errorCodeStr.length(); ++i) {
-        if (!std::isdigit(errorCodeStr[i])) {
-            printError("无效的错误码格式: " + errorCodeStr);
-            return false;
-        }
-    }
-    
-    int errorCode = stringToInt(errorCodeStr);
-    if (errorCode < 100 || errorCode > 599) {
-        printError("HTTP错误码超出范围(100-599): " + errorCodeStr);
+    // error_page 指令格式: error_page code [code...] uri;
+    // 最后一个参数是文件路径,前面所有参数都是错误码
+    // 例如: error_page 500 502 503 504 /50x.html;
+
+    if (args.size() < 2) {
+        printError("error_page指令需要至少两个参数（错误码和页面路径）");
         return false;
     }
-    
-    server.addErrorPage(errorCode, args[1]);
+
+    // 最后一个参数是文件路径
+    const std::string& uri = args[args.size() - 1];
+
+    // 前面所有参数都应该是错误码
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        const std::string& errorCodeStr = args[i];
+
+        // 检查错误码是否为数字
+        for (size_t j = 0; j < errorCodeStr.length(); ++j) {
+            if (!std::isdigit(errorCodeStr[j])) {
+                printError("无效的错误码格式: " + errorCodeStr);
+                return false;
+            }
+        }
+
+        int errorCode = stringToInt(errorCodeStr);
+        if (errorCode < 100 || errorCode > 599) {
+            printError("HTTP错误码超出范围(100-599): " + errorCodeStr);
+            return false;
+        }
+
+        // 为每个错误码添加相同的错误页面
+        server.addErrorPage(errorCode, uri);
+    }
+
     return true;
 }
 
@@ -475,9 +491,9 @@ void ConfigParser::parseCgiPass(LocationConfig& location, const std::vector<std:
 bool ConfigParser::parseLocationDirective(LocationConfig& location) {
     std::string directive = currentToken().value;
     consumeToken();
-    
+
     std::vector<std::string> args = getDirectiveArgs();
-    
+
     // 为需要参数的指令添加参数验证
     if (directive == "root") {
         if (args.empty()) {
@@ -511,6 +527,12 @@ bool ConfigParser::parseLocationDirective(LocationConfig& location) {
             return false;
         }
         parseAutoindex(location, args);
+    } else if (directive == "client_max_body_size") {
+        if (args.empty()) {
+            printError("client_max_body_size指令需要一个参数");
+            return false;
+        }
+        parseClientMaxBodySize(location, args);
     } else if (directive == "cgi") {
         if (args.size() < 2) {
             printError("cgi指令需要两个参数（扩展名和程序路径）");
@@ -533,11 +555,11 @@ bool ConfigParser::parseLocationDirective(LocationConfig& location) {
         printError("未知的location指令: " + directive);
         return false;
     }
-    
+
     if (!expectSemicolon()) {
         return false;
     }
-    
+
     return true;
 }
 
@@ -653,6 +675,12 @@ void ConfigParser::parseIndex(std::vector<std::string>& index, const std::vector
 void ConfigParser::parseClientMaxBodySize(ServerConfig& server, const std::vector<std::string>& args) {
     if (!args.empty()) {
         server.clientMaxBodySize = parseSize(args[0]);
+    }
+}
+
+void ConfigParser::parseClientMaxBodySize(LocationConfig& location, const std::vector<std::string>& args) {
+    if (!args.empty()) {
+        location.clientMaxBodySize = parseSize(args[0]);
     }
 }
 
