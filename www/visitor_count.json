@@ -1,7 +1,7 @@
 {
-  "count": 7,
+  "count": 10,
   "first_visit": "2025-10-03T11:40:56.295462",
-  "last_visit": "2025-10-03T12:36:46.599260",
+  "last_visit": "2025-10-03T17:43:13.262852",
   "visits": [
     {
       "timestamp": "2025-10-03T11:40:56.295462",
@@ -35,6 +35,21 @@
     },
     {
       "timestamp": "2025-10-03T12:36:46.599260",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-03T17:22:01.808505",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-03T17:36:25.932779",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-03T17:43:13.262852",
       "ip": "127.0.0.1",
       "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
     }

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download - 42 Webserv</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav a {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            border: 2px solid #667eea;
+            font-weight: 500;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .download-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 2px solid #667eea;
+        }
+
+        .download-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .file-list {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .file-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-icon {
+            font-size: 2em;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            color: #333;
+            font-weight: 500;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .download-btn {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .info-box h3 {
+            color: #0056b3;
+            margin-bottom: 15px;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-box ul li {
+            padding: 5px 0;
+            color: #004085;
+        }
+
+        .info-box ul li::before {
+            content: "ℹ️ ";
+            margin-right: 8px;
+        }
+
+        .refresh-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #28a745;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #218838;
+            transform: scale(1.02);
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📥 Téléchargement de fichiers</h1>
+            <p>Téléchargez les fichiers depuis le serveur</p>
+        </header>
+
+        <nav class="nav">
+            <a href="/">🏠 Accueil</a>
+            <a href="/about.html">ℹ️ À propos</a>
+            <a href="/upload.html">📤 Upload</a>
+            <a href="/download.html" class="active">📥 Download</a>
+            <a href="/cgi-bin/test.py">🐍 CGI Test</a>
+            <a href="/python/server_status.py">📊 Status</a>
+        </nav>
+
+        <div class="content">
+            <div class="download-section">
+                <h2>Fichiers disponibles au téléchargement</h2>
+
+                <div id="fileList" class="file-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Chargement des fichiers...</p>
+                    </div>
+                </div>
+
+                <button class="refresh-btn" onclick="loadFiles()">🔄 Rafraîchir la liste</button>
+            </div>
+
+            <div class="info-box">
+                <h3>📁 Informations</h3>
+                <ul>
+                    <li>Les fichiers proviennent du répertoire <code>/upload</code></li>
+                    <li>Cliquez sur le bouton de téléchargement pour obtenir le fichier</li>
+                    <li>Les fichiers uploadés apparaissent automatiquement ici</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>42 Webserv Project</strong></p>
+            <p>Développé avec ❤️ pour École 42</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                Un serveur web complet écrit from scratch en C++
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'pdf': '📄',
+                'doc': '📝', 'docx': '📝',
+                'xls': '📊', 'xlsx': '📊',
+                'ppt': '📊', 'pptx': '📊',
+                'txt': '📃',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'bmp': '🖼️',
+                'mp3': '🎵', 'wav': '🎵', 'ogg': '🎵',
+                'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬',
+                'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️',
+                'html': '🌐', 'css': '🎨', 'js': '⚙️',
+                'py': '🐍', 'cpp': '💻', 'c': '💻', 'h': '💻'
+            };
+            return icons[ext] || '📎';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        async function loadFiles() {
+            const fileListDiv = document.getElementById('fileList');
+
+            fileListDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Chargement des fichiers...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/upload/');
+                const html = await response.text();
+
+                // Parse HTML to extract file names from <li> tags
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const listItems = doc.querySelectorAll('li');
+
+                const files = [];
+                listItems.forEach(li => {
+                    const text = li.textContent.trim();
+
+                    // Skip current and parent directory entries
+                    if (text && text !== './' && text !== '../') {
+                        files.push({
+                            name: text,
+                            url: '/upload/' + encodeURIComponent(text)
+                        });
+                    }
+                });
+
+                if (files.length === 0) {
+                    fileListDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <h3>Aucun fichier disponible</h3>
+                            <p>Uploadez des fichiers pour les voir apparaître ici</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display files
+                let filesHtml = '';
+                files.forEach(file => {
+                    const icon = getFileIcon(file.name);
+                    filesHtml += `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-icon">${icon}</div>
+                                <div class="file-details">
+                                    <div class="file-name">${file.name}</div>
+                                </div>
+                            </div>
+                            <a href="${file.url}" class="download-btn" download>
+                                📥 Télécharger
+                            </a>
+                        </div>
+                    `;
+                });
+
+                fileListDiv.innerHTML = filesHtml;
+
+            } catch (error) {
+                fileListDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">❌</div>
+                        <h3>Erreur de chargement</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load files on page load
+        loadFiles();
+    </script>
+</body>
+</html>
