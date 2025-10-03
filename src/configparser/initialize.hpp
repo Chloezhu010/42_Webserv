@@ -17,6 +17,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
 
 // 服务器实例类
 class ServerInstance {

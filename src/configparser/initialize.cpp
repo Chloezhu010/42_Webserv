@@ -812,11 +812,32 @@ bool WebServer::parseHttpRequest(ClientConnection* conn) {
 
 static void generateDirListing(ClientConnection* conn, const std::string& dir_path)
 {
-    // generate HTML dir listing
+    // open the directory
+    DIR* dir = opendir(dir_path.c_str());
+    if (!dir){
+        conn->response_buffer = conn->http_response->buildErrorResponse(500, "Cannot Read Directory", *conn->http_request);
+        return;
+    }
+    // generate HTML header
     std::ostringstream html;
     html << "<html><head><title>Directory Listing</title></head>\r\n";
     html << "<body><h1>Index of " << dir_path << "</h1>\r\n";
-    html << "</ul></body></html>";
+    html << "<hr><ul>\n";
+    // read dir entries
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        std::string filename = entry->d_name;
+        // add link for each file/dir
+        html << "<li>" << filename;
+        // add trailing slash for directory
+        if (entry->d_type == DT_DIR)
+            html << "/";
+        html << "</li>\n";
+    }
+    closedir(dir);
+    // close HTML
+    html << "</ul><hr></body></html>";
+    // set response
     conn->http_response->setStatusCode(200);
     conn->http_response->setHeader("Content-Type", "text/html");
     conn->http_response->setBody(html.str());
@@ -1022,10 +1043,6 @@ static void handlePostResponse(ClientConnection* conn, std::string& uri, CGIHand
         return;
     }
     /* determine root path */
-    // std::string root = conn->server_instance->getConfig().root;
-    // if (conn->matched_location && !conn->matched_location->root.empty())
-    //     root = conn->matched_location->root;
-    // std::string file_path = root + uri;
     std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* client body size validation */
@@ -1157,11 +1174,6 @@ static void handleDeleteResponse(ClientConnection* conn, std::string& uri, CGIHa
         return;
     }
     /* determine root path */
-    // std::string root = conn->server_instance->getConfig().root;
-    // if (conn->matched_location && !conn->matched_location->root.empty())
-    //     root = conn->matched_location->root;
-    // /* construct the full file path */
-    // std::string file_path = root + uri;
     std::string file_path = buildFilePath(conn, uri);
     std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
