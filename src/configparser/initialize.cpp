@@ -16,7 +16,7 @@ ServerInstance::~ServerInstance() {
 }
 
 bool ServerInstance::initialize() {
-    // 为每个监听端口创建socket
+    // Create socket for each listening port
     for (size_t i = 0; i < config.listen.size(); ++i) {
         int port = config.listen[i];
         int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -26,8 +26,9 @@ bool ServerInstance::initialize() {
             cleanup();
             return false;
         }
-        
-        // 设置socket选项
+
+
+        // Set socket options
         int opt = 1;
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
             std::cerr << "Failed to set SO_REUSEADDR for port " << port 
@@ -36,8 +37,9 @@ bool ServerInstance::initialize() {
             cleanup();
             return false;
         }
-        
-        // 设置非阻塞模式
+
+
+        // Set non-blocking mode
         int flags = fcntl(sockfd, F_GETFL, 0);
         if (flags == -1 || fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
             std::cerr << "Failed to set non-blocking mode for port " << port 
@@ -46,8 +48,9 @@ bool ServerInstance::initialize() {
             cleanup();
             return false;
         }
-        
-        // 绑定端口
+
+
+        // Bind port
         struct sockaddr_in addr;
         std::memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
@@ -89,15 +92,15 @@ bool ServerInstance::startListening() {
 }
 
 void WebServer::cleanup() {
-    // 关闭所有客户端连接
+    // Close all client connections
     for (std::map<int, ClientConnection*>::iterator it = clientConnections.begin();
          it != clientConnections.end(); ++it) {
         close(it->first);
         delete it->second;
     }
     clientConnections.clear();
-    
-    // 清理服务器实例
+
+    // Clean up server instances
     for (size_t i = 0; i < servers.size(); ++i) {
         ServerInstance* server = servers[i];
         delete server;
@@ -187,44 +190,44 @@ WebServer::~WebServer() {
 bool WebServer::initialize(const std::string& configFile) {
     std::cout << "Initializing WebServer with config file: " << configFile << std::endl;
     
-    // 解析配置文件
+    // Parse config file
     ConfigParser parser;
     if (!parser.parseFile(configFile, config)) {
         std::cerr << "Failed to parse config file: " << parser.getLastError() << std::endl;
         return false;
     }
-	std::cout << "\n";
-    displayFullConfig(config);
-    std::cout << "\n";
+	// std::cout << "\n";
+    // displayFullConfig(config);
+    // std::cout << "\n";
     
     return initializeFromConfig(config);
 }
 
 bool WebServer::initializeFromConfig(const Config& cfg) {
     config = cfg;
-    
-    // 验证配置
+
+    // Validate configuration
     if (!validateConfig()) {
         std::cerr << "Configuration validation failed" << std::endl;
         return false;
     }
-    
-    // 创建服务器实例
+
+    // Create server instances
     if (!createServerInstances()) {
         std::cerr << "Failed to create server instances" << std::endl;
         cleanup();
         return false;
     }
-    
-    // 设置端口映射
+
+    // Setup port mapping
     if (!setupPortMapping()) {
         std::cerr << "Failed to setup port mapping" << std::endl;
         cleanup();
         return false;
     }
-    
+
     initialized = true;
-    printServerInfo();
+    // printServerInfo();
     
     return true;
 }
@@ -516,8 +519,8 @@ void WebServer::run() {
         /* select() call */ 
         // setup timeout to periodically wake up and check running flag
         struct timeval timeout;
-        timeout.tv_sec = 1; // 1 second timeout
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
         
         // return the number of fds ready for read/write
         int activity = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
@@ -636,34 +639,64 @@ void WebServer::run() {
 }
 
 void WebServer::handleNewConnection(int serverFd) {
-    struct sockaddr_in clientAddr;
-    socklen_t clientLen = sizeof(clientAddr);
-    
-    int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
-    if (clientFd == -1) {
-        std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
-        return;
+    while (true) {
+        struct sockaddr_in clientAddr;
+        socklen_t clientLen = sizeof(clientAddr);
+
+        int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
+        if (clientFd == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+            break;
+        }
+        // set non-blocking mode
+        int flags = fcntl(clientFd, F_GETFL, 0);
+        if (flags == -1 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
+            std::cerr << "Failed to set non-blocking mode" << std::endl;
+            close(clientFd);
+            continue;
+        }
+        // create client connection object
+        ClientConnection* conn = new ClientConnection(clientFd);
+        conn->last_active = time(NULL); // init last active time
+        clientConnections[clientFd] = conn;
+
+        // 更新maxFd
+        if (clientFd > maxFd) {
+            maxFd = clientFd;
+        }
+        std::cout << "New connection accepted: fd=" << clientFd << std::endl;
     }
+
+    // struct sockaddr_in clientAddr;
+    // socklen_t clientLen = sizeof(clientAddr);
     
-    // 设置非阻塞模式
-    int flags = fcntl(clientFd, F_GETFL, 0);
-    if (flags == -1 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        std::cerr << "Failed to set non-blocking mode" << std::endl;
-        close(clientFd);
-        return;
-    }
+    // int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
+    // if (clientFd == -1) {
+    //     std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+    //     return;
+    // }
     
-    // 创建客户端连接对象
-    ClientConnection* conn = new ClientConnection(clientFd);
-    conn->last_active = time(NULL); // init last active time
-    clientConnections[clientFd] = conn;
+    // // 设置非阻塞模式
+    // int flags = fcntl(clientFd, F_GETFL, 0);
+    // if (flags == -1 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
+    //     std::cerr << "Failed to set non-blocking mode" << std::endl;
+    //     close(clientFd);
+    //     return;
+    // }
     
-    // 更新maxFd
-    if (clientFd > maxFd) {
-        maxFd = clientFd;
-    }
+    // // 创建客户端连接对象
+    // ClientConnection* conn = new ClientConnection(clientFd);
+    // conn->last_active = time(NULL); // init last active time
+    // clientConnections[clientFd] = conn;
     
-    std::cout << "New connection accepted: fd=" << clientFd << std::endl;
+    // // 更新maxFd
+    // if (clientFd > maxFd) {
+    //     maxFd = clientFd;
+    // }
+    
+    // std::cout << "New connection accepted: fd=" << clientFd << std::endl;
 }
 
 /* helper function for handleClientRequest */

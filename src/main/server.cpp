@@ -2,26 +2,26 @@
 #include <csignal>
 #include "../configparser/initialize.hpp"
 
-// 用于信号处理的全局服务器指针
+// Global server pointer for signal handling
 WebServer* g_server = NULL;
 
-// 优雅关闭的信号处理函数
+// Signal handler for graceful shutdown
 void signalHandler(int signal) {
-    std::cout << "\n🛑 接收到信号 " << signal << std::endl;
+    std::cout << "\n🛑 Received signal " << signal << std::endl;
     if (g_server && g_server->isRunning()) {
-        std::cout << "正在优雅地关闭服务器..." << std::endl;
+        std::cout << "Gracefully shutting down server..." << std::endl;
         g_server->stop();
     }
-    // 不要调用 exit(),让程序自然退出以触发析构函数
+    // Don't call exit(), let program exit naturally to trigger destructors
 }
 
 void setupSignalHandlers() {
-    // 处理常见的终止信号
+    // Handle common termination signals
     signal(SIGINT, signalHandler);   // Ctrl+C
-    signal(SIGTERM, signalHandler);  // 终止请求
-    signal(SIGQUIT, signalHandler);  // 退出信号
-    
-    // 忽略SIGPIPE（管道破裂），在代码中处理
+    signal(SIGTERM, signalHandler);  // Termination request
+    signal(SIGQUIT, signalHandler);  // Quit signal
+
+    // Ignore SIGPIPE (broken pipe), handle in code
     signal(SIGPIPE, SIG_IGN);
 }
 
@@ -31,64 +31,64 @@ void printUsage(const char* programName) {
 }
 
 int main(int argc, char* argv[]) {
-    // 检查命令行参数
+    // Check command line arguments
     if (argc != 2) {
-        std::cerr << "❌ 错误：参数数量无效" << std::endl;
+        std::cerr << "❌ Error: Invalid number of arguments" << std::endl;
         printUsage(argv[0]);
         return 1;
     }
 
-    // 设置信号处理器以优雅关闭
+    // Setup signal handlers for graceful shutdown
     setupSignalHandlers();
 
     try {
-        // 创建WebServer实例
+        // Create WebServer instance
         WebServer server;
-        g_server = &server; // 为信号处理器设置全局指针
+        g_server = &server; // Set global pointer for signal handler
 
-        std::cout << "🚀 启动WebServer..." << std::endl;
-        std::cout << "📁 配置文件: " << argv[1] << std::endl;
+        std::cout << "🚀 Starting WebServer..." << std::endl;
+        std::cout << "📁 Config file: " << argv[1] << std::endl;
 
-        // 使用配置文件初始化服务器
+        // Initialize server with config file
         if (!server.initialize(argv[1])) {
-            std::cerr << "❌ 使用配置文件初始化服务器失败: " 
+            std::cerr << "❌ Failed to initialize server with config file: "
                       << argv[1] << std::endl;
-            std::cerr << "错误详情: " << server.getLastError() << std::endl;
+            std::cerr << "Error details: " << server.getLastError() << std::endl;
             return 1;
         }
 
-        std::cout << "✅ 服务器初始化成功" << std::endl;
+        std::cout << "✅ Server initialized successfully" << std::endl;
 
-        // 启动服务器
+        // Start server
         if (!server.start()) {
-            std::cerr << "❌ 启动服务器失败" << std::endl;
-            std::cerr << "错误详情: " << server.getLastError() << std::endl;
+            std::cerr << "❌ Failed to start server" << std::endl;
+            std::cerr << "Error details: " << server.getLastError() << std::endl;
             return 1;
         }
 
-        std::cout << "🌟 WebServer正在运行!" << std::endl;
-        std::cout << "按Ctrl+C停止服务器" << std::endl;
+        std::cout << "🌟 WebServer is running!" << std::endl;
+        std::cout << "Press Ctrl+C to stop server" << std::endl;
 
-        // 保持服务器运行
-        // 注意：你需要在WebServer类中实现实际的事件循环
-        // 这可能是一个处理客户端连接的run()方法
+        // Keep server running
+        // Note: You need to implement the actual event loop in WebServer class
+        // This would be a run() method that handles client connections
         while (server.isRunning()) {
-            // 这里通常会有你的主事件循环
-            // 现在我们只是sleep以防止忙等待
+            // This is where your main event loop would be
+            // Now we just run to prevent busy waiting
             server.run();
-            
-            // 你可能想要为WebServer添加run()或handleEvents()方法
-            // 使用select/epoll处理客户端连接
+
+            // You may want to add run() or handleEvents() method to WebServer
+            // Using select/epoll to handle client connections
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "❌ 捕获异常: " << e.what() << std::endl;
+        std::cerr << "❌ Caught exception: " << e.what() << std::endl;
         return 1;
     } catch (...) {
-        std::cerr << "❌ 发生未知错误" << std::endl;
+        std::cerr << "❌ Unknown error occurred" << std::endl;
         return 1;
     }
 
-    std::cout << "👋 服务器关闭完成" << std::endl;
+    std::cout << "👋 Server shutdown complete" << std::endl;
     return 0;
 }

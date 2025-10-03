@@ -13,11 +13,11 @@ struct LocationConfig;
 
 struct ClientConnection {
     int fd;
-    std::string request_buffer;  // 存储接收到的请求数据
-    std::string response_buffer; // 存储要发送的响应数据
-    size_t bytes_sent;          // 已发送的字节数
-    bool request_complete;      // 请求是否接收完整
-    bool response_ready;        // 响应是否准备好
+    std::string request_buffer;  // stores received request data
+    std::string response_buffer; // stores response data to send
+    size_t bytes_sent;          // number of bytes sent
+    bool request_complete;      // whether request is fully received
+    bool response_ready;        // whether response is ready to send
     time_t last_active;       // to deal with timeout
 
     // handle http request & response
@@ -27,12 +27,12 @@ struct ClientConnection {
     // config context for this connection
     ServerInstance* server_instance; // which server is handling this request
     LocationConfig* matched_location; // which location matched the URI
-    
-    // 默认构造函数（C++98需要）
+
+    // Default constructor (required for C++98)
     ClientConnection();
     ~ClientConnection();
-    
-    // 带参数构造函数
+
+    // Constructor with parameters
     ClientConnection(int socket_fd);
 };
 
