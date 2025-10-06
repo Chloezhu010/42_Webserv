@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 - Accès interdit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .error-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .error-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 40px 30px;
+        }
+
+        .error-code {
+            font-size: 8em;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .error-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .error-content {
+            padding: 40px 30px;
+        }
+
+        .error-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #555;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .error-details {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-details h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .error-details p {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .btn-home {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #e74c3c;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            border: 2px solid #e74c3c;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-back:hover {
+            background: #f8f9fa;
+            transform: translateY(-3px);
+        }
+
+        .error-info {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .error-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="error-code">403</div>
+            <div class="error-title">Accès interdit</div>
+        </div>
+
+        <div class="error-content">
+            <div class="error-icon">🚫</div>
+            <div class="error-message">
+                Vous n'avez pas l'autorisation d'accéder à cette ressource.<br>
+                L'accès à cette page est restreint.
+            </div>
+
+            <div class="error-details">
+                <h4>Qu'est-ce que cela signifie ?</h4>
+                <p>
+                    Le serveur a compris votre demande, mais refuse de l'autoriser. Vous n'avez pas les permissions
+                    nécessaires pour accéder à cette ressource. Cela peut être dû à des restrictions de sécurité
+                    ou à des configurations d'accès spécifiques.
+                </p>
+            </div>
+
+            <div>
+                <a href="/" class="btn-home">🏠 Retour à l'accueil</a>
+                <a href="javascript:history.back()" class="btn-back">← Page précédente</a>
+            </div>
+        </div>
+
+        <div class="error-info">
+            <p><strong>42 Webserv</strong> - Erreur HTTP 403</p>
+            <p>Si vous pensez avoir les droits d'accès, contactez l'administrateur.</p>
+        </div>
+    </div>
+</body>
+</html>

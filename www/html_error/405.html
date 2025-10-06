@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>405 - Méthode non autorisée</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .error-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .error-header {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            padding: 40px 30px;
+        }
+
+        .error-code {
+            font-size: 8em;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .error-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .error-content {
+            padding: 40px 30px;
+        }
+
+        .error-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #555;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .error-details {
+            background: #e7f3ff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-details h4 {
+            color: #004085;
+            margin-bottom: 10px;
+        }
+
+        .error-details p {
+            color: #004085;
+            line-height: 1.6;
+        }
+
+        .method-info {
+            background: #f8f9fa;
+            border-left: 4px solid #9b59b6;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .method-info strong {
+            color: #9b59b6;
+        }
+
+        .btn-home {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #9b59b6;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            border: 2px solid #9b59b6;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-back:hover {
+            background: #f8f9fa;
+            transform: translateY(-3px);
+        }
+
+        .error-info {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .error-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="error-code">405</div>
+            <div class="error-title">Méthode non autorisée</div>
+        </div>
+
+        <div class="error-content">
+            <div class="error-icon">⛔</div>
+            <div class="error-message">
+                La méthode HTTP utilisée n'est pas autorisée pour cette ressource.<br>
+                Veuillez utiliser une méthode appropriée.
+            </div>
+
+            <div class="error-details">
+                <h4>Qu'est-ce que cela signifie ?</h4>
+                <p>
+                    La méthode HTTP que vous avez utilisée (par exemple DELETE, PUT) n'est pas autorisée
+                    pour accéder à cette ressource. Le serveur connaît la méthode mais ne l'accepte pas
+                    pour cette URI spécifique.
+                </p>
+            </div>
+
+            <div class="method-info">
+                <strong>Méthodes HTTP courantes :</strong><br>
+                • GET - Récupérer une ressource<br>
+                • POST - Soumettre des données<br>
+                • DELETE - Supprimer une ressource<br>
+                • PUT - Mettre à jour une ressource
+            </div>
+
+            <div>
+                <a href="/" class="btn-home">🏠 Retour à l'accueil</a>
+                <a href="javascript:history.back()" class="btn-back">← Page précédente</a>
+            </div>
+        </div>
+
+        <div class="error-info">
+            <p><strong>42 Webserv</strong> - Erreur HTTP 405</p>
+            <p>Vérifiez la méthode HTTP utilisée dans votre requête.</p>
+        </div>
+    </div>
+</body>
+</html>
