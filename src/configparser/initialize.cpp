@@ -737,11 +737,11 @@ void WebServer::handleClientRequest(int clientFd) {
     ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
     
     if (bytesRead <= 0) {
-        if (bytesRead == 0) {
+        if (bytesRead == 0)
             std::cout << "Client disconnected: fd=" << clientFd << std::endl;
-        } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            std::cerr << "recv() failed: " << strerror(errno) << std::endl;
-        }
+        // } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        //     std::cerr << "recv() failed: " << strerror(errno) << std::endl;
+        // }
         closeClientConnection(clientFd);
         return;
     } else {
@@ -1289,8 +1289,8 @@ void WebServer::handleClientResponse(int clientFd) {
     if (bytesSent > 0) {
         conn->bytes_sent += bytesSent;
         std::cout << "Sent " << bytesSent << " bytes to fd=" << clientFd << std::endl;
-    } else if (bytesSent == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-        std::cerr << "send() failed: " << strerror(errno) << std::endl;
+    } else if (bytesSent <= 0) {
+        std::cerr << "send() failed: " << std::endl;
         closeClientConnection(clientFd);
     }
 }

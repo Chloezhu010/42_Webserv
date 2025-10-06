@@ -740,20 +740,20 @@ main() {
     start_server || exit 1
 
     # Run all test suites
-    # test_basic_get
-    # test_basic_post
-    # test_basic_delete
-    # test_unknown_methods
-    # test_file_upload
-    # test_configuration
-    # test_browser_compatibility
-    # test_http_protocol
-    # test_uri_validation
-    # test_header_validation
-    # test_chunked_encoding
-    # test_cgi
-    # test_malformed_requests
-    # test_edge_cases
+    test_basic_get
+    test_basic_post
+    test_basic_delete
+    test_unknown_methods
+    test_file_upload
+    test_configuration
+    test_browser_compatibility
+    test_http_protocol
+    test_uri_validation
+    test_header_validation
+    test_chunked_encoding
+    test_cgi
+    test_malformed_requests
+    test_edge_cases
     test_concurrent_connections
     test_memory_leaks
     # test_siege

@@ -182,7 +182,6 @@ Create a complete HTTP server from scratch in C++98 that can:
         - select() sleeps until one of these occurs
             - any fd in readFds has data to read
             - any fd in the writeFds is ready to write
-            - 100ms timeout expires -> how long select() waits before giving up and returning
         - return
             - > 0: number of ready fds
             - = 0: timeout
