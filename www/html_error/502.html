@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>502 - Bad Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .error-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .error-header {
+            background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+            color: white;
+            padding: 40px 30px;
+        }
+
+        .error-code {
+            font-size: 8em;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .error-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .error-content {
+            padding: 40px 30px;
+        }
+
+        .error-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #555;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .error-details {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-details h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .error-details p {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .btn-home {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(253, 126, 20, 0.4);
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #fd7e14;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            border: 2px solid #fd7e14;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-back:hover {
+            background: #f8f9fa;
+            transform: translateY(-3px);
+        }
+
+        .error-info {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .error-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="error-code">502</div>
+            <div class="error-title">Bad Gateway</div>
+        </div>
+
+        <div class="error-content">
+            <div class="error-icon">🚧</div>
+            <div class="error-message">
+                Le serveur a reçu une réponse invalide.<br>
+                La passerelle ou le proxy ne fonctionne pas correctement.
+            </div>
+
+            <div class="error-details">
+                <h4>Qu'est-ce que cela signifie ?</h4>
+                <p>
+                    Le serveur agit comme une passerelle et a reçu une réponse invalide du serveur en amont.
+                    Cela se produit généralement lorsqu'un serveur CGI ou un serveur backend ne répond pas correctement.
+                </p>
+            </div>
+
+            <div>
+                <a href="/" class="btn-home">🏠 Retour à l'accueil</a>
+                <a href="javascript:location.reload()" class="btn-back">🔄 Réessayer</a>
+            </div>
+        </div>
+
+        <div class="error-info">
+            <p><strong>42 Webserv</strong> - Erreur HTTP 502</p>
+            <p>Si le problème persiste, veuillez contacter l'administrateur du serveur.</p>
+        </div>
+    </div>
+</body>
+</html>

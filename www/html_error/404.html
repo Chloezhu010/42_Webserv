@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page non trouvée</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .error-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .error-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+        }
+
+        .error-code {
+            font-size: 8em;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .error-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .error-content {
+            padding: 40px 30px;
+        }
+
+        .error-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #555;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .btn-home {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            border: 2px solid #667eea;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn-back:hover {
+            background: #f8f9fa;
+            transform: translateY(-3px);
+        }
+
+        .error-info {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .error-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="error-code">404</div>
+            <div class="error-title">Page non trouvée</div>
+        </div>
+
+        <div class="error-content">
+            <div class="error-icon">🔍</div>
+            <div class="error-message">
+                Oups ! La page que vous recherchez semble introuvable.<br>
+                Elle a peut-être été déplacée ou supprimée.
+            </div>
+
+            <div>
+                <a href="/" class="btn-home">🏠 Retour à l'accueil</a>
+                <a href="javascript:history.back()" class="btn-back">← Page précédente</a>
+            </div>
+        </div>
+
+        <div class="error-info">
+            <p><strong>42 Webserv</strong> - Erreur HTTP 404</p>
+            <p>Si vous pensez qu'il s'agit d'une erreur, veuillez contacter l'administrateur.</p>
+        </div>
+    </div>
+</body>
+</html>
