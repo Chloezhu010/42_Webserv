@@ -192,7 +192,28 @@ Create a complete HTTP server from scratch in C++98 that can:
     - Phase 4C: connection cleanup
 - select() is in the main loop and checks read end & write end simultaneously
     - ```int activity = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);```
+- Code flow
+    ```
+    while (running) {
+        // Step 1: Setup - Tell select() what to monitor
+        FD_ZERO(&readFds);
+        FD_SET(serverFd, &readFds);      // Add server fd
+        FD_SET(client_fd, &readFds);     // Add client fd
 
+        // Step 2: Wait - select() removes fds that aren't ready
+        select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+
+        // Step 3: Check - FD_ISSET tells us which fds are ready
+        if (FD_ISSET(serverFd, &readFds))     // New connection?
+            handleNewConnection(serverFd);
+
+        if (FD_ISSET(client_fd, &readFds))    // Client sent data?
+            handleClientRequest(client_fd);
+
+        if (FD_ISSET(client_fd, &writeFds))   // Can we send response?
+            handleClientResponse(client_fd);
+    }
+    ```
 
 
 ### Port issues

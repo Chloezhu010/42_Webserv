@@ -663,35 +663,6 @@ void WebServer::handleNewConnection(int serverFd) {
         }
         std::cout << "New connection accepted: fd=" << clientFd << std::endl;
     }
-
-    // struct sockaddr_in clientAddr;
-    // socklen_t clientLen = sizeof(clientAddr);
-    
-    // int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
-    // if (clientFd == -1) {
-    //     std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
-    //     return;
-    // }
-    
-    // // 设置非阻塞模式
-    // int flags = fcntl(clientFd, F_GETFL, 0);
-    // if (flags == -1 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
-    //     std::cerr << "Failed to set non-blocking mode" << std::endl;
-    //     close(clientFd);
-    //     return;
-    // }
-    
-    // // 创建客户端连接对象
-    // ClientConnection* conn = new ClientConnection(clientFd);
-    // conn->last_active = time(NULL); // init last active time
-    // clientConnections[clientFd] = conn;
-    
-    // // 更新maxFd
-    // if (clientFd > maxFd) {
-    //     maxFd = clientFd;
-    // }
-    
-    // std::cout << "New connection accepted: fd=" << clientFd << std::endl;
 }
 
 /* helper function for handleClientRequest */

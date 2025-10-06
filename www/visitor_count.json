@@ -1,18 +1,8 @@
 {
-  "count": 4,
+  "count": 12,
   "first_visit": "2025-10-06T15:32:42.866117",
-  "last_visit": "2025-10-06T16:27:05.260176",
+  "last_visit": "2025-10-06T16:53:40.780264",
   "visits": [
-    {
-      "timestamp": "2025-10-06T15:32:42.866117",
-      "ip": "127.0.0.1",
-      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
-    },
-    {
-      "timestamp": "2025-10-06T15:32:50.013836",
-      "ip": "127.0.0.1",
-      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
-    },
     {
       "timestamp": "2025-10-06T16:27:05.099334",
       "ip": "127.0.0.1",
@@ -22,6 +12,46 @@
       "timestamp": "2025-10-06T16:27:05.260176",
       "ip": "127.0.0.1",
       "user_agent": "curl/8.7.1"
+    },
+    {
+      "timestamp": "2025-10-06T16:48:21.464280",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:49:04.155315",
+      "ip": "127.0.0.1",
+      "user_agent": "curl/8.7.1"
+    },
+    {
+      "timestamp": "2025-10-06T16:50:21.698756",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:53:03.040590",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:53:09.636520",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:53:38.924178",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:53:39.910087",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T16:53:40.780264",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
     }
   ]
 }
