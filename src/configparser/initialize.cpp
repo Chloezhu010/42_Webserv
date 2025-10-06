@@ -532,11 +532,6 @@ void WebServer::run() {
             std::cerr << "select() failed: " << strerror(errno) << std::endl;
             break;
         }
-        // timeout handling
-        if (activity == 0) {
-            // timetout occurred, fall through to connection cleanup
-            // continue;
-        }
         
         /* new connection handling */ 
         // if the server socket is readable, then accept new connections on all listening sockets

@@ -1,0 +1,22 @@
+{
+  "count": 3,
+  "first_visit": "2025-10-06T13:23:21.309438",
+  "last_visit": "2025-10-06T13:30:53.473989",
+  "visits": [
+    {
+      "timestamp": "2025-10-06T13:23:21.309438",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T13:29:31.311344",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    },
+    {
+      "timestamp": "2025-10-06T13:30:53.473989",
+      "ip": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap"
+    }
+  ]
+}

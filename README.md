@@ -167,10 +167,54 @@ Create a complete HTTP server from scratch in C++98 that can:
         Browser requests /hello.php → Server runs PHP program → PHP generates HTML → Sends generated content
         ```
 ## Eval
+### Concepts
 - Basic of HTTP server
-- Funtion used for IO multiplexing
-- How select() is working
+    - A program that listens for http requests and send back http response
+    - Client -> send http request -> server -> generate http response -> client
+- Funtion used for I/O multiplexing
+    - select(), works on all posix system, macOS, linux, BSD
+    - IO multiplexing: monitor multiple file descriptors (sockets) simultaneously to see which ones are ready for I/O operations -> non-blocking
+- How select() is working: in run()
+    - Phase 1: setup, clear fd_sets from previous iteration
+    - Phase 2A: Monitor server sockets, detect new incoming connections
+    - Phase 2B: Monitor client sockets, monitor for incoming data and write readiness
+    - Phase 3: use select() for multiplexing
+        - select() sleeps until one of these occurs
+            - any fd in readFds has data to read
+            - any fd in the writeFds is ready to write
+            - 100ms timeout expires -> how long select() waits before giving up and returning
+        - return
+            - > 0: number of ready fds
+            - = 0: timeout
+            - < 0: error
+    - Phase 4: handle ready connection
+    - Phase 4A: read requests
+    - Phase 4B: write responses
+    - Phase 4C: connection cleanup
+- select() is in the main loop and checks read end & write end simultaneously
+    - ```int activity = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);```
 
+
+
+### Port issues
+- Launch multiple servers at the same time on the common port
+    - When the 2nd server also tries to bind with port 8080, it will return "Address already in use"
+### Siege test
+- Siege: http load testing & benchmarking tool that simulates multiple concurrent users hitting the server
+- What it tests
+    - Concurrent connections: How many simultaneous users your server can handle
+    - Throughput: Requests per second
+    - Response time: How fast your server responds under load
+    - Availability: Percentage of successful requests (uptime)
+    - Stability: Whether your server crashes or hangs under stress
+- Start test
+    ```
+    # Basic stress test (10 concurrent users, 30 seconds)
+    siege -c 10 -t 30s http://localhost:8080/
+
+    # More aggressive (50 users, 1 minute)
+    siege -c 50 -t 1m http://localhost:8080/
+    ```
     
 ## Reference sources
 - RFC: https://www.rfc-editor.org/
