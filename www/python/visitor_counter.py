@@ -181,7 +181,7 @@ def create_counter_html(data):
     return html
 
 # 主执行
-print("Content-Type: text/html")
+print("Content-Type: text/html; charset=utf-8")
 print("")
 
 try:

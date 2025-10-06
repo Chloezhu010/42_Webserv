@@ -902,41 +902,6 @@ static std::string buildFilePath(ClientConnection* conn, const std::string& uri)
     return root + uri;
 }
 
-/* helper function for handleGetResponse */
-static void handleDirRequest(ClientConnection* conn, const std::string& file_path, const std::string& uri)
-{
-    // URI should have trailing slash (redirect if missing)
-    (void)uri; 
-    // get index files from config (location overrides server)
-    std::vector<std::string> index_files = conn->server_instance->getConfig().index;
-    if (conn->matched_location && !conn->matched_location->index.empty())
-        index_files = conn->matched_location->index; // location-specific index overrides server index
-    // try each index file in order
-    for (size_t i = 0; i < index_files.size(); ++i)
-    {
-        std::string index_path = file_path;
-        // add trailing slash if missing
-        if (index_path[index_path.length() - 1] != '/')
-            index_path += "/";
-        index_path += index_files[i];
-        // if file exists, serve it
-        if (access(index_path.c_str(), F_OK) == 0) // file exists
-        {
-            conn->response_buffer = conn->http_response->buildFileResponse(index_path, *conn->http_request);
-            return;
-        }
-    }
-    // no index file found, check autoindex enabled
-    if (conn->matched_location && conn->matched_location->autoindex)
-    {
-        generateDirListing(conn, file_path);
-        return;
-    }
-    // no index file found, no autoindex enabled
-    // conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
-    conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
-}
-
 /* helper function for handleGetResponse
     - check for method permission in the config
 */
@@ -1010,6 +975,45 @@ static bool handleCGIExecution(ClientConnection* conn, const std::string scriptP
     return false;
 }
 
+/* helper function for handleGetResponse */
+static void handleDirRequest(ClientConnection* conn, const std::string& file_path, const std::string& uri, CGIHandler& cgiHandler)
+{
+    // URI should have trailing slash (redirect if missing)
+    (void)uri; 
+    // get index files from config (location overrides server)
+    std::vector<std::string> index_files = conn->server_instance->getConfig().index;
+    if (conn->matched_location && !conn->matched_location->index.empty())
+        index_files = conn->matched_location->index; // location-specific index overrides server index
+    // try each index file in order
+    for (size_t i = 0; i < index_files.size(); ++i)
+    {
+        std::string index_path = file_path;
+        // add trailing slash if missing
+        if (index_path[index_path.length() - 1] != '/')
+            index_path += "/";
+        index_path += index_files[i];
+        // if file exists, serve it
+        if (access(index_path.c_str(), F_OK) == 0) // file exists
+        {
+            // check if index file is a CGI script
+            if (conn->matched_location && CGIHandler::isCGIRequest(index_files[i], *conn->matched_location))
+                handleCGIExecution(conn, index_path, cgiHandler);
+            else // serve as static file
+                conn->response_buffer = conn->http_response->buildFileResponse(index_path, *conn->http_request);
+            return;
+        }
+    }
+    // no index file found, check autoindex enabled
+    if (conn->matched_location && conn->matched_location->autoindex)
+    {
+        generateDirListing(conn, file_path);
+        return;
+    }
+    // no index file found, no autoindex enabled
+    // conn->response_buffer = conn->http_response->buildErrorResponse(403, "Forbidden", *conn->http_request);
+    conn->response_buffer = conn->http_response->buildErrorResponse(404, "Not Found", *conn->http_request);
+}
+
 /* helper function for buildHttpResponse： build the response for GET
     - Method not allowed -> 405
     - Redirect -> 3xx
@@ -1038,7 +1042,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandl
     }
     /* determine root path */
     std::string file_path = buildFilePath(conn, uri);
-    std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
+    // std::cout << "🈺 DEBUG: file path: " << file_path << std::endl;
     /* check for CGI request */
     if (conn->matched_location && CGIHandler::isCGIRequest(uri, *conn->matched_location))
     {
@@ -1055,7 +1059,7 @@ static void handleGetResponse(ClientConnection* conn, std::string& uri, CGIHandl
     struct stat file_stat;
     if (stat(file_path.c_str(), &file_stat) == 0 && S_ISDIR(file_stat.st_mode)) // is directory
     {
-        handleDirRequest(conn, file_path, uri);
+        handleDirRequest(conn, file_path, uri, cgiHandler);
         return;
     }
     /* serve the file */

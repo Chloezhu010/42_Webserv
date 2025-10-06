@@ -51,10 +51,10 @@ bool CGIProcess::execute(const std::string& cgiPath,
 
     if (childPid_ == 0) {
         // 子进程：执行CGI
-        std::cout << "🔧 CGI Child: Setting up child process..." << std::endl;
+        std::cerr << "🔧 CGI Child: Setting up child process..." << std::endl;
         setupChildProcess(cgiPath, scriptPath, envp);
         // execve 不应该返回，如果返回说明出错
-        std::cout << "❌ CGI Child: execve failed, exiting" << std::endl;
+        std::cerr << "❌ CGI Child: execve failed, exiting" << std::endl;
         exit(1);
     } else {
         // 父进程：处理I/O
@@ -90,7 +90,7 @@ bool CGIProcess::setupChildProcess(const std::string& cgiPath,
     // 重定向stdin和stdout
     dup2(inputPipe_[0], STDIN_FILENO);
     dup2(outputPipe_[1], STDOUT_FILENO);
-    dup2(outputPipe_[1], STDERR_FILENO);
+    // dup2(outputPipe_[1], STDERR_FILENO);
 
     std::cout << "🔧 CGI Child: Closing unused pipe ends..." << std::endl;
     // 关闭不需要的管道端
@@ -109,7 +109,7 @@ bool CGIProcess::setupChildProcess(const std::string& cgiPath,
         NULL
     };
 
-    std::cout << "🔧 CGI Child: Executing: " << cgiPath << " " << scriptPath << std::endl;
+    std::cerr << "🔧 CGI Child: Executing: " << cgiPath << " " << scriptPath << std::endl;
     execve(cgiPath.c_str(), argv, envp);
     std::cerr << "❌ CGI Child: Failed to execute CGI: " << cgiPath << std::endl;
     return false;
